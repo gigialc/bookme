@@ -39,6 +39,18 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS granola_api_key TEXT;
+CREATE TABLE IF NOT EXISTS todos (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  text TEXT NOT NULL,
+  done BOOLEAN NOT NULL DEFAULT FALSE,
+  source TEXT NOT NULL DEFAULT 'manual',
+  source_note_id TEXT,
+  source_note_title TEXT,
+  meeting_time TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 CREATE TABLE IF NOT EXISTS accounts (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -121,6 +133,19 @@ export type User = {
   theme: string;
   slot_step_mins: number;
   avatar_url: string | null;
+  granola_api_key: string | null;
+};
+
+export type Todo = {
+  id: number;
+  user_id: number;
+  text: string;
+  done: boolean;
+  source: string;
+  source_note_id: string | null;
+  source_note_title: string | null;
+  meeting_time: string | null;
+  created_at: string;
 };
 
 export async function getUserById(id: number): Promise<User | null> {

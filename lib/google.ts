@@ -199,7 +199,9 @@ export async function eventsForAccount(
       if (!start || !end) continue;
       events.push({
         id: e.iCalUID ?? e.id ?? `${start}-${e.summary}`,
-        title: e.summary || "(no title)",
+        // Untitled events are usually Google's "busy" mirror blocks
+        // from another calendar — label them the way Google does.
+        title: e.summary || "Busy",
         startIso: start,
         endIso: end,
         allDay: !e.start?.dateTime,

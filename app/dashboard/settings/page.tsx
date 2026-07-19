@@ -45,12 +45,39 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [granolaConnected, setGranolaConnected] = useState(false);
+  const [granolaKey, setGranolaKey] = useState("");
+  const [granolaMsg, setGranolaMsg] = useState("");
+  const [granolaBusy, setGranolaBusy] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/settings")
       .then((r) => r.json())
       .then((d) => setSettings(d.settings));
+    fetch("/api/admin/integrations")
+      .then((r) => r.json())
+      .then((d) => setGranolaConnected(Boolean(d.granola_connected)))
+      .catch(() => {});
   }, []);
+
+  async function saveGranola(key: string) {
+    setGranolaBusy(true);
+    setGranolaMsg("");
+    const res = await fetch("/api/admin/integrations", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ granola_api_key: key }),
+    });
+    const d = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setGranolaConnected(Boolean(d.granola_connected));
+      setGranolaKey("");
+      setGranolaMsg(d.granola_connected ? "Granola connected." : "Granola disconnected.");
+    } else {
+      setGranolaMsg(d.error || "Couldn't save the key — try again.");
+    }
+    setGranolaBusy(false);
+  }
 
   async function save() {
     if (!settings) return;
@@ -218,6 +245,46 @@ export default function SettingsPage() {
             <p className="mt-1.5 text-xs text-ink/50">How often slots start</p>
           </div>
         </div>
+      </div>
+
+      <div className={cardCls}>
+        <h2 className="mb-2 text-sm font-bold">Integrations</h2>
+        <p className="mb-4 text-sm text-ink/60">
+          Connect <a href="https://granola.ai" target="_blank" rel="noreferrer" className="underline underline-offset-2">Granola</a>{" "}
+          and your meeting notes turn into to-dos automatically after each call.
+        </p>
+        {granolaConnected ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="card-flat bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
+              Granola connected
+            </span>
+            <button
+              onClick={() => saveGranola("")}
+              disabled={granolaBusy}
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+            >
+              Disconnect
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <input
+              type="password"
+              value={granolaKey}
+              onChange={(e) => setGranolaKey(e.target.value)}
+              placeholder="grn_… (Granola app → Settings → API keys)"
+              className="retro-input flex-1"
+            />
+            <button
+              onClick={() => saveGranola(granolaKey)}
+              disabled={granolaBusy || !granolaKey.trim()}
+              className="btn px-4 py-2 text-sm"
+            >
+              {granolaBusy ? "Checking…" : "Connect"}
+            </button>
+          </div>
+        )}
+        {granolaMsg && <p className="mt-3 text-sm font-semibold">{granolaMsg}</p>}
       </div>
 
       {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
