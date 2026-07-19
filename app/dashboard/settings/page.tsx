@@ -5,6 +5,7 @@ import { THEMES } from "@/lib/themes";
 
 type Settings = {
   email: string;
+  avatar_url: string | null;
   username: string;
   display_name: string;
   welcome_message: string;
@@ -86,7 +87,24 @@ export default function SettingsPage() {
       </p>
 
       <div className={cardCls}>
-        <h2 className="mb-5 text-sm font-bold">Profile</h2>
+        <div className="mb-5 flex items-center gap-3">
+          {settings.avatar_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={settings.avatar_url}
+              alt="Your profile photo"
+              className="h-11 w-11 rounded-full border-2 border-ink object-cover"
+            />
+          )}
+          <div>
+            <h2 className="text-sm font-bold">Profile</h2>
+            {settings.avatar_url && (
+              <p className="text-xs text-ink/50">
+                Photo from your Google account — shown on your booking page
+              </p>
+            )}
+          </div>
+        </div>
 
         <label className={labelCls}>Username</label>
         <div className="mb-1.5 flex items-center gap-2">

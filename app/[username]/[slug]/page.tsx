@@ -39,6 +39,7 @@ export default async function BookPage({
           ← Back
         </Link>
         <BookingClient
+          avatarUrl={user.avatar_url}
           username={user.username}
           eventType={{
             slug: eventType.slug,

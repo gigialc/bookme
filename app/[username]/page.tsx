@@ -26,12 +26,22 @@ export default async function ProfilePage({
     <main className="flex flex-1 flex-col items-center bg-cream px-4 py-14">
       <div className="w-full max-w-lg">
         <div className="mb-8 text-center">
-          <div
-            className={`card mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold ${theme.accentBg} ${theme.accentText}`}
-            style={{ borderRadius: "9999px" }}
-          >
-            {initial}
-          </div>
+          {user.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.avatar_url}
+              alt={user.display_name}
+              className="mx-auto mb-4 h-16 w-16 rounded-full border-2 border-ink object-cover"
+              style={{ boxShadow: "4px 4px 0 #1a1a1a" }}
+            />
+          ) : (
+            <div
+              className={`card mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold ${theme.accentBg} ${theme.accentText}`}
+              style={{ borderRadius: "9999px" }}
+            >
+              {initial}
+            </div>
+          )}
           <h1 className="mb-2 text-2xl font-bold tracking-tight">{user.display_name}</h1>
           <p className="text-sm leading-relaxed text-ink/60">{user.welcome_message}</p>
         </div>

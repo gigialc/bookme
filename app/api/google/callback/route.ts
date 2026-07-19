@@ -25,6 +25,14 @@ export async function GET(req: NextRequest) {
     const email = me.data.email?.toLowerCase();
     if (!email) return redirect("/dashboard/calendars?error=noemail");
 
+    // Backfill the profile photo from Google if we don't have one yet.
+    if (me.data.picture) {
+      await query(
+        "UPDATE users SET avatar_url = $2 WHERE id = $1 AND avatar_url IS NULL",
+        [userId, me.data.picture]
+      );
+    }
+
     const [existing] = await query<Account>("SELECT * FROM accounts WHERE email = $1", [email]);
     if (existing && existing.user_id !== userId) {
       return redirect("/dashboard/calendars?error=taken");

@@ -15,6 +15,7 @@ function publicSettings(user: User) {
     booking_window_days: user.booking_window_days,
     theme: user.theme,
     slot_step_mins: user.slot_step_mins,
+    avatar_url: user.avatar_url,
   };
 }
 

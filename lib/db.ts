@@ -35,8 +35,10 @@ CREATE TABLE IF NOT EXISTS users (
   booking_window_days INTEGER NOT NULL DEFAULT 30,
   theme TEXT NOT NULL DEFAULT 'rose',
   slot_step_mins INTEGER NOT NULL DEFAULT 30,
+  avatar_url TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 CREATE TABLE IF NOT EXISTS accounts (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -118,6 +120,7 @@ export type User = {
   booking_window_days: number;
   theme: string;
   slot_step_mins: number;
+  avatar_url: string | null;
 };
 
 export async function getUserById(id: number): Promise<User | null> {

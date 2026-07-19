@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import LogoutButton from "./LogoutButton";
+import Logo from "@/components/Logo";
 import {
   HomeIcon,
   TagIcon,
@@ -39,12 +40,12 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex flex-1 flex-col bg-cream sm:flex-row">
-      <aside className="flex shrink-0 flex-row items-center gap-1 overflow-x-auto border-b-2 border-ink bg-cream p-3 sm:min-h-screen sm:w-60 sm:flex-col sm:items-stretch sm:border-b-0 sm:border-r-2 sm:p-4">
+      <aside className="flex shrink-0 flex-row items-center gap-1 overflow-x-auto border-b-2 border-ink bg-cream p-3 sm:sticky sm:top-0 sm:h-screen sm:w-60 sm:flex-col sm:items-stretch sm:overflow-y-auto sm:border-b-0 sm:border-r-2 sm:p-4">
         <Link
           href="/dashboard"
           className="mb-0 hidden items-center gap-2.5 px-3 py-2 sm:mb-4 sm:flex"
         >
-          <span className="rainbow inline-block h-5 w-1.5 rounded-sm" />
+          <Logo size={26} />
           <span className="text-lg font-bold tracking-tight">bookme</span>
         </Link>
         {NAV.map((item) => (

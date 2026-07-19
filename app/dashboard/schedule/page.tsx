@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DateTime, Interval } from "luxon";
-import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  MapPinIcon,
+  MailIcon,
+  UsersIcon,
+  VideoIcon,
+  CalendarIcon,
+} from "@/components/icons";
 
 type CalendarEvent = {
   id: string;
@@ -11,7 +20,13 @@ type CalendarEvent = {
   endIso: string;
   allDay: boolean;
   accountEmail: string;
+  calendarName: string;
   meetLink: string | null;
+  location: string | null;
+  description: string | null;
+  htmlLink: string | null;
+  organizer: string | null;
+  attendees: { email: string; name: string | null; response: string | null }[];
 };
 
 // the classic six colors, in stripe order
@@ -20,6 +35,24 @@ const ACCOUNT_COLORS = ["#e03a3e", "#009ddc", "#61bb46", "#963d97", "#f5821f", "
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 22;
 const HOUR_PX = 44;
+
+const RESPONSE_ICON: Record<string, string> = {
+  accepted: "✓",
+  declined: "✗",
+  tentative: "~",
+  needsAction: "?",
+};
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .trim();
+}
 
 type Positioned = {
   event: CalendarEvent;
@@ -58,11 +91,8 @@ function layoutDay(events: { event: CalendarEvent; start: DateTime; end: DateTim
     });
   }
 
-  // widen lanes count for overlapping clusters
   for (const p of placed) {
-    const overlapping = placed.filter(
-      (q) => q.start < p.end && q.end > p.start
-    );
+    const overlapping = placed.filter((q) => q.start < p.end && q.end > p.start);
     const lanes = Math.max(...overlapping.map((q) => q.lane)) + 1;
     for (const q of overlapping) q.lanes = Math.max(q.lanes, lanes);
   }
@@ -70,20 +100,37 @@ function layoutDay(events: { event: CalendarEvent; start: DateTime; end: DateTim
 }
 
 export default function SchedulePage() {
-  const [weekStart, setWeekStart] = useState(() =>
-    DateTime.now().startOf("week")
-  );
+  const [tz, setTz] = useState<string | null>(null);
+  const [weekStart, setWeekStart] = useState<DateTime | null>(null);
   const [events, setEvents] = useState<CalendarEvent[] | null>(null);
   const [accounts, setAccounts] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState<CalendarEvent | null>(null);
+
+  // Week starts once we know the timezone from settings.
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        const zone = d.settings?.timezone || "local";
+        setTz(zone);
+        setWeekStart(DateTime.now().setZone(zone).startOf("week"));
+      })
+      .catch(() => {
+        setTz("local");
+        setWeekStart(DateTime.now().startOf("week"));
+      });
+  }, []);
 
   const days = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => weekStart.plus({ days: i })),
+    () =>
+      weekStart ? Array.from({ length: 7 }, (_, i) => weekStart.plus({ days: i })) : [],
     [weekStart]
   );
-  const today = DateTime.now().startOf("day");
+  const today = tz ? DateTime.now().setZone(tz).startOf("day") : DateTime.now().startOf("day");
 
   const load = useCallback(async () => {
+    if (!weekStart) return;
     setEvents(null);
     setError("");
     try {
@@ -112,13 +159,18 @@ export default function SchedulePage() {
     (_, i) => DAY_START_HOUR + i
   );
 
+  const inTz = useCallback(
+    (iso: string) => DateTime.fromISO(iso).setZone(tz ?? "local"),
+    [tz]
+  );
+
   function eventsForDay(day: DateTime) {
     const dayInt = Interval.fromDateTimes(day, day.plus({ days: 1 }));
     const timed: { event: CalendarEvent; start: DateTime; end: DateTime }[] = [];
     const allDay: CalendarEvent[] = [];
     for (const e of events ?? []) {
-      const start = DateTime.fromISO(e.startIso).setZone("local");
-      const end = DateTime.fromISO(e.endIso).setZone("local");
+      const start = inTz(e.startIso);
+      const end = inTz(e.endIso);
       if (!Interval.fromDateTimes(start, end).overlaps(dayInt)) continue;
       if (e.allDay) {
         allDay.push(e);
@@ -132,6 +184,8 @@ export default function SchedulePage() {
     }
     return { timed: layoutDay(timed), allDay };
   }
+
+  if (!weekStart) return <p className="text-sm text-ink/50">Loading…</p>;
 
   return (
     <div className="max-w-6xl">
@@ -151,7 +205,7 @@ export default function SchedulePage() {
             <ChevronLeftIcon />
           </button>
           <button
-            onClick={() => setWeekStart(DateTime.now().startOf("week"))}
+            onClick={() => setWeekStart(DateTime.now().setZone(tz ?? "local").startOf("week"))}
             className="btn-plain px-3.5 py-2 text-xs font-bold"
           >
             Today
@@ -216,14 +270,15 @@ export default function SchedulePage() {
                     </p>
                     <div className="mt-1 space-y-1">
                       {dayData.allDay.slice(0, 2).map((e, i) => (
-                        <div
+                        <button
                           key={i}
+                          onClick={() => setSelected(e)}
                           title={`${e.title} — ${e.accountEmail}`}
-                          className="truncate rounded border border-ink/30 px-1 py-0.5 text-left text-[10px] font-semibold"
+                          className="block w-full truncate rounded border border-ink/30 px-1 py-0.5 text-left text-[10px] font-semibold hover:border-ink"
                           style={{ background: `${colorFor(e.accountEmail)}26` }}
                         >
                           {e.title}
-                        </div>
+                        </button>
                       ))}
                       {dayData.allDay.length > 2 && (
                         <p className="text-[10px] font-semibold text-ink/40">
@@ -238,7 +293,6 @@ export default function SchedulePage() {
 
             {/* Time grid */}
             <div className="grid" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
-              {/* hour labels */}
               <div className="relative" style={{ height: hours.length * HOUR_PX }}>
                 {hours.map((h) => (
                   <span
@@ -254,9 +308,8 @@ export default function SchedulePage() {
               {days.map((d) => {
                 const dayData = events ? eventsForDay(d) : { timed: [] as Positioned[] };
                 const isToday = d.hasSame(today, "day");
-                const now = DateTime.now();
-                const nowTop =
-                  (now.hour + now.minute / 60 - DAY_START_HOUR) * HOUR_PX;
+                const now = DateTime.now().setZone(tz ?? "local");
+                const nowTop = (now.hour + now.minute / 60 - DAY_START_HOUR) * HOUR_PX;
                 return (
                   <div
                     key={d.toISO()}
@@ -280,10 +333,10 @@ export default function SchedulePage() {
                       const color = colorFor(p.event.accountEmail);
                       const width = 100 / p.lanes;
                       return (
-                        <div
+                        <button
                           key={i}
-                          title={`${p.event.title}\n${DateTime.fromISO(p.event.startIso).toFormat("h:mm a")} – ${DateTime.fromISO(p.event.endIso).toFormat("h:mm a")}\n${p.event.accountEmail}`}
-                          className="absolute overflow-hidden rounded-md border border-ink/40 px-1.5 py-0.5"
+                          onClick={() => setSelected(p.event)}
+                          className="absolute overflow-hidden rounded-md border border-ink/40 px-1.5 py-0.5 text-left transition hover:border-ink hover:shadow-[2px_2px_0_#1a1a1a]"
                           style={{
                             top: p.top,
                             height: p.height,
@@ -298,10 +351,10 @@ export default function SchedulePage() {
                           </p>
                           {p.height > 34 && (
                             <p className="truncate text-[10px] text-ink/60">
-                              {DateTime.fromISO(p.event.startIso).toFormat("h:mm a")}
+                              {inTz(p.event.startIso).toFormat("h:mm a")}
                             </p>
                           )}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -313,8 +366,118 @@ export default function SchedulePage() {
       </div>
 
       <p className="mono-label mt-3 text-ink/40">
-        times shown in your local timezone · showing {DAY_START_HOUR}:00–{DAY_END_HOUR}:00
+        times shown in {(tz ?? "local").replace(/_/g, " ")} · showing {DAY_START_HOUR}:00–{DAY_END_HOUR}:00
       </p>
+
+      {/* Event detail window */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="animate-pop card w-full max-w-md overflow-hidden bg-paper"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="titlebar">
+              <button
+                className="titlebar-box transition hover:bg-ink"
+                onClick={() => setSelected(null)}
+                aria-label="Close"
+              />
+              <span className="titlebar-label">event details</span>
+            </div>
+            <div className="max-h-[70vh] overflow-y-auto p-6">
+              <div className="mb-4 flex items-start gap-3">
+                <span
+                  className="mt-1 inline-block h-4 w-4 shrink-0 rounded-sm border border-ink"
+                  style={{ background: colorFor(selected.accountEmail) }}
+                />
+                <h2 className="text-lg font-bold leading-snug">{selected.title}</h2>
+              </div>
+
+              <div className="space-y-2.5 text-sm">
+                <p className="flex items-center gap-2.5">
+                  <ClockIcon className="h-4 w-4 shrink-0 text-ink/50" />
+                  {selected.allDay ? (
+                    <span>
+                      All day · {inTz(selected.startIso).toFormat("cccc, LLLL d")}
+                    </span>
+                  ) : (
+                    <span>
+                      {inTz(selected.startIso).toFormat("cccc, LLLL d")} ·{" "}
+                      {inTz(selected.startIso).toFormat("h:mm a")} –{" "}
+                      {inTz(selected.endIso).toFormat("h:mm a")}
+                    </span>
+                  )}
+                </p>
+                <p className="flex items-center gap-2.5">
+                  <CalendarIcon className="h-4 w-4 shrink-0 text-ink/50" />
+                  <span>{selected.calendarName}</span>
+                </p>
+                <p className="flex items-center gap-2.5">
+                  <MailIcon className="h-4 w-4 shrink-0 text-ink/50" />
+                  <span>{selected.accountEmail}</span>
+                </p>
+                {selected.location && (
+                  <p className="flex items-center gap-2.5">
+                    <MapPinIcon className="h-4 w-4 shrink-0 text-ink/50" />
+                    <span>{selected.location}</span>
+                  </p>
+                )}
+                {selected.attendees.length > 0 && (
+                  <div className="flex items-start gap-2.5">
+                    <UsersIcon className="mt-0.5 h-4 w-4 shrink-0 text-ink/50" />
+                    <div>
+                      <p className="mono-label mb-1 text-ink/50">
+                        {selected.attendees.length} guest{selected.attendees.length === 1 ? "" : "s"}
+                      </p>
+                      <ul className="space-y-0.5">
+                        {selected.attendees.map((a, i) => (
+                          <li key={i} className="text-xs">
+                            <span className="mr-1 font-bold">
+                              {RESPONSE_ICON[a.response ?? ""] ?? "·"}
+                            </span>
+                            {a.name || a.email}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+                {selected.description && (
+                  <div className="card-flat mt-3 whitespace-pre-wrap bg-cream p-3 text-xs leading-relaxed text-ink/80">
+                    {stripHtml(selected.description)}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {selected.meetLink && (
+                  <a
+                    href={selected.meetLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-primary px-4 py-2 text-xs"
+                  >
+                    <VideoIcon className="h-3.5 w-3.5" /> Join Meet
+                  </a>
+                )}
+                {selected.htmlLink && (
+                  <a
+                    href={selected.htmlLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn px-4 py-2 text-xs"
+                  >
+                    Open in Google Calendar
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

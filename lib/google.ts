@@ -151,7 +151,13 @@ export type CalendarEvent = {
   endIso: string;
   allDay: boolean;
   accountEmail: string;
+  calendarName: string;
   meetLink: string | null;
+  location: string | null;
+  description: string | null;
+  htmlLink: string | null;
+  organizer: string | null;
+  attendees: { email: string; name: string | null; response: string | null }[];
 };
 
 /** Fetch actual events (with titles) across every calendar of one account. */
@@ -182,8 +188,10 @@ export async function eventsForAccount(
   );
 
   const events: CalendarEvent[] = [];
-  for (const r of results) {
+  for (let ci = 0; ci < results.length; ci++) {
+    const r = results[ci];
     if (r.status !== "fulfilled") continue;
+    const calName = cals[ci]?.summaryOverride ?? cals[ci]?.summary ?? "Calendar";
     for (const e of r.value.data.items ?? []) {
       if (e.status === "cancelled") continue;
       const start = e.start?.dateTime ?? e.start?.date;
@@ -196,7 +204,20 @@ export async function eventsForAccount(
         endIso: end,
         allDay: !e.start?.dateTime,
         accountEmail: account.email,
+        calendarName: calName,
         meetLink: e.hangoutLink ?? null,
+        location: e.location ?? null,
+        description: e.description ?? null,
+        htmlLink: e.htmlLink ?? null,
+        organizer: e.organizer?.displayName ?? e.organizer?.email ?? null,
+        attendees: (e.attendees ?? [])
+          .filter((a) => !a.resource)
+          .slice(0, 20)
+          .map((a) => ({
+            email: a.email ?? "",
+            name: a.displayName ?? null,
+            response: a.responseStatus ?? null,
+          })),
       });
     }
   }

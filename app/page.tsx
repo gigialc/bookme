@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { CalendarIcon, GlobeIcon, VideoIcon, ClockIcon } from "@/components/icons";
 
 const FEATURES = [
@@ -29,7 +30,7 @@ export default function Home() {
     <main className="flex flex-1 flex-col bg-cream">
       <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
         <div className="flex items-center gap-3">
-          <span className="rainbow inline-block h-6 w-2 rounded-sm" />
+          <Logo size={30} />
           <span className="text-xl font-bold tracking-tight">bookme</span>
         </div>
         <Link href="/login" className="btn px-4 py-1.5 text-sm">

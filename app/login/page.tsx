@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signInWithGoogleAction } from "@/lib/actions";
 import { GoogleIcon } from "@/components/icons";
+import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,9 @@ export default async function LoginPage({
             <span className="titlebar-label">welcome</span>
           </div>
           <div className="p-8 text-center">
+            <div className="mb-3 flex justify-center">
+              <Logo size={44} />
+            </div>
             <p
               className="mb-1 text-4xl"
               style={{ fontFamily: "var(--font-caveat), cursive" }}

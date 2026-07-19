@@ -57,6 +57,7 @@ function allTimezones(): string[] {
 
 export default function BookingClient({
   username,
+  avatarUrl,
   eventType,
   displayName,
   themeKey,
@@ -65,6 +66,7 @@ export default function BookingClient({
   ownerTimezone,
 }: {
   username: string;
+  avatarUrl: string | null;
   eventType: PublicEventType;
   displayName: string;
   themeKey: string;
@@ -221,8 +223,18 @@ export default function BookingClient({
       <div className="p-6 sm:p-8">
         {/* Header */}
         <div className="mb-7 flex items-start gap-4 border-b-2 border-ink pb-6">
-          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border-2 border-ink text-2xl ${theme.accentSoft}`}>
-            {eventType.emoji}
+          <div className="relative shrink-0">
+            <div className={`flex h-12 w-12 items-center justify-center rounded-lg border-2 border-ink text-2xl ${theme.accentSoft}`}>
+              {eventType.emoji}
+            </div>
+            {avatarUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={avatarUrl}
+                alt={displayName}
+                className="absolute -bottom-2 -right-2 h-7 w-7 rounded-full border-2 border-ink object-cover"
+              />
+            )}
           </div>
           <div>
             <h1 className="text-lg font-bold tracking-tight sm:text-xl">{eventType.name}</h1>
