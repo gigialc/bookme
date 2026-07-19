@@ -14,6 +14,9 @@ export function getAuth() {
         secret:
           process.env.NEON_AUTH_COOKIE_SECRET ||
           "dev-placeholder-secret-please-configure-32chars!",
+        // The SDK default is "strict", which drops the session cookie on the
+        // cross-site redirect back from Google → infinite login loop.
+        sameSite: "lax",
       },
     });
   }
