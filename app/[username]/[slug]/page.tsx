@@ -34,9 +34,9 @@ export default async function BookPage({
       <div className="w-full max-w-2xl">
         <Link
           href={`/${user.username}`}
-          className="mb-4 inline-block text-sm font-semibold text-neutral-500 hover:text-neutral-700"
+          className="mb-4 inline-block text-sm font-medium text-stone-500 transition hover:text-stone-900"
         >
-          ← back
+          ← Back
         </Link>
         <BookingClient
           username={user.username}

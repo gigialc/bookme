@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { VideoIcon } from "@/components/icons";
 
 type BookingRow = {
   id: number;
@@ -29,7 +30,7 @@ export default function BookingsPage() {
   }, [load]);
 
   async function cancel(b: BookingRow) {
-    if (!confirm(`Cancel ${b.name}'s booking? They'll get a cancellation email from Google.`)) return;
+    if (!confirm(`Cancel ${b.name}'s booking? They'll receive a cancellation email.`)) return;
     await fetch(`/api/admin/bookings?id=${b.id}`, { method: "DELETE" });
     load();
   }
@@ -52,21 +53,28 @@ export default function BookingsPage() {
 
   function Card({ b, showCancel }: { b: BookingRow; showCancel: boolean }) {
     return (
-      <div className={`rounded-3xl bg-white p-5 shadow ${b.status === "cancelled" ? "opacity-50" : ""}`}>
+      <div
+        className={`rounded-2xl border border-stone-200 bg-white p-5 shadow-sm ${
+          b.status === "cancelled" ? "opacity-60" : ""
+        }`}
+      >
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-2xl">{b.event_emoji ?? "💬"}</span>
+          <span className="text-xl">{b.event_emoji ?? "•"}</span>
           <div className="min-w-0 flex-1">
-            <p className="font-bold">
+            <p className="text-sm font-semibold text-stone-900">
               {b.name}{" "}
-              <span className="text-xs font-semibold text-neutral-400">· {b.event_name ?? "call"}</span>
+              <span className="font-normal text-stone-400">· {b.event_name ?? "meeting"}</span>
               {b.status === "cancelled" && (
-                <span className="ml-1 text-xs font-semibold text-rose-400">(cancelled)</span>
+                <span className="ml-1.5 text-xs font-medium text-rose-500">cancelled</span>
               )}
             </p>
-            <p className="text-xs text-neutral-500">
-              {fmt(b.start_ts)} · <a href={`mailto:${b.email}`} className="underline">{b.email}</a>
+            <p className="text-xs text-stone-500">
+              {fmt(b.start_ts)} ·{" "}
+              <a href={`mailto:${b.email}`} className="underline underline-offset-2 hover:text-stone-700">
+                {b.email}
+              </a>
             </p>
-            {b.notes && <p className="mt-1 text-xs italic text-neutral-400">“{b.notes}”</p>}
+            {b.notes && <p className="mt-1 text-xs italic text-stone-400">“{b.notes}”</p>}
           </div>
           <div className="flex gap-2">
             {b.meet_link && (
@@ -74,15 +82,15 @@ export default function BookingsPage() {
                 href={b.meet_link}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-xl bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-600 hover:bg-sky-100"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 transition hover:border-stone-300 hover:bg-stone-50"
               >
-                Meet 🎥
+                <VideoIcon className="h-3.5 w-3.5" /> Join
               </a>
             )}
             {showCancel && (
               <button
                 onClick={() => cancel(b)}
-                className="rounded-xl bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-100"
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
               >
                 Cancel
               </button>
@@ -95,27 +103,37 @@ export default function BookingsPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-1 text-2xl font-bold">Bookings 💖</h1>
-      <p className="mb-6 text-neutral-500">Everyone who&apos;s booked time with you.</p>
+      <h1 className="mb-1 text-2xl font-semibold tracking-tight">Bookings</h1>
+      <p className="mb-8 text-sm text-stone-500">Everyone who has booked time with you.</p>
 
-      {bookings === null && <p className="text-sm text-neutral-400">Loading… ⏳</p>}
+      {bookings === null && <p className="text-sm text-stone-400">Loading…</p>}
 
       {bookings !== null && (
         <>
-          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Upcoming</h2>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
+            Upcoming
+          </h2>
           {upcoming.length === 0 ? (
-            <p className="mb-6 text-sm text-neutral-400">Nothing upcoming — share your booking link! 🔗</p>
+            <p className="mb-8 text-sm text-stone-400">
+              Nothing upcoming — share your booking link.
+            </p>
           ) : (
-            <div className="mb-6 space-y-3">
-              {upcoming.map((b) => <Card key={b.id} b={b} showCancel />)}
+            <div className="mb-8 space-y-3">
+              {upcoming.map((b) => (
+                <Card key={b.id} b={b} showCancel />
+              ))}
             </div>
           )}
 
           {past.length > 0 && (
             <>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-neutral-400">Past & cancelled</h2>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
+                Past &amp; cancelled
+              </h2>
               <div className="space-y-3">
-                {past.map((b) => <Card key={b.id} b={b} showCancel={false} />)}
+                {past.map((b) => (
+                  <Card key={b.id} b={b} showCancel={false} />
+                ))}
               </div>
             </>
           )}

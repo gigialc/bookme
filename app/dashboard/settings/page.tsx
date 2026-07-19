@@ -34,6 +34,11 @@ const COMMON_TIMEZONES = [
   "Australia/Sydney",
 ];
 
+const inputCls =
+  "w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-stone-300 focus:ring-2 focus:ring-stone-200";
+const labelCls = "mb-1.5 block text-xs font-semibold text-stone-500";
+const cardCls = "mb-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm";
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
@@ -62,12 +67,12 @@ export default function SettingsPage() {
       setTimeout(() => setSaved(false), 2000);
     } else {
       const d = await res.json().catch(() => ({}));
-      setError(d.error || "Couldn't save — try again?");
+      setError(d.error || "Couldn't save — please try again.");
     }
     setSaving(false);
   }
 
-  if (!settings) return <p className="text-sm text-neutral-400">Loading… ⏳</p>;
+  if (!settings) return <p className="text-sm text-stone-400">Loading…</p>;
 
   const tzList = COMMON_TIMEZONES.includes(settings.timezone)
     ? COMMON_TIMEZONES
@@ -75,119 +80,135 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-1 text-2xl font-bold">Settings ⚙️</h1>
-      <p className="mb-6 text-neutral-500">Make it yours 💅</p>
+      <h1 className="mb-1 text-2xl font-semibold tracking-tight">Settings</h1>
+      <p className="mb-8 text-sm text-stone-500">
+        Your public profile and scheduling preferences.
+      </p>
 
-      <div className="mb-6 rounded-3xl bg-white p-6 shadow">
-        <h2 className="mb-4 font-bold">🌸 Profile</h2>
+      <div className={cardCls}>
+        <h2 className="mb-5 text-sm font-semibold text-stone-900">Profile</h2>
 
-        <label className="mb-1 block text-xs font-bold text-neutral-500">Username</label>
-        <div className="mb-1 flex items-center gap-1">
-          <span className="text-sm text-neutral-400">/</span>
+        <label className={labelCls}>Username</label>
+        <div className="mb-1.5 flex items-center gap-2">
+          <span className="text-sm text-stone-400">/</span>
           <input
             value={settings.username}
             onChange={(e) => setSettings({ ...settings, username: e.target.value.toLowerCase() })}
-            className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+            className={inputCls}
           />
         </div>
-        <p className="mb-4 text-xs text-neutral-400">
-          Your booking link: {typeof window !== "undefined" ? window.location.origin : ""}/{settings.username} · signed in as {settings.email}
+        <p className="mb-5 text-xs text-stone-400">
+          Your booking link: {typeof window !== "undefined" ? window.location.origin : ""}/
+          {settings.username} · signed in as {settings.email}
         </p>
 
-        <label className="mb-1 block text-xs font-bold text-neutral-500">Your name</label>
+        <label className={labelCls}>Display name</label>
         <input
           value={settings.display_name}
           onChange={(e) => setSettings({ ...settings, display_name: e.target.value })}
-          className="mb-4 w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+          className={`mb-5 ${inputCls}`}
         />
 
-        <label className="mb-1 block text-xs font-bold text-neutral-500">Welcome message</label>
+        <label className={labelCls}>Welcome message</label>
         <textarea
           value={settings.welcome_message}
           onChange={(e) => setSettings({ ...settings, welcome_message: e.target.value })}
           rows={2}
-          className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+          className={inputCls}
         />
       </div>
 
-      <div className="mb-6 rounded-3xl bg-white p-6 shadow">
-        <h2 className="mb-4 font-bold">🎨 Theme</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className={cardCls}>
+        <h2 className="mb-5 text-sm font-semibold text-stone-900">Theme</h2>
+        <div className="flex flex-wrap gap-3">
           {Object.values(THEMES).map((t) => (
             <button
               key={t.key}
               onClick={() => setSettings({ ...settings, theme: t.key })}
-              className={`rounded-2xl p-4 text-left transition hover:scale-105 ${t.pageBg} ${
-                settings.theme === t.key ? "ring-2 ring-neutral-500 ring-offset-2" : ""
+              className={`flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
+                settings.theme === t.key
+                  ? "border-stone-400 bg-stone-50 text-stone-900"
+                  : "border-stone-200 text-stone-600 hover:border-stone-300"
               }`}
             >
-              <div className="mb-1 text-2xl">{t.emoji}</div>
-              <p className="text-xs font-bold">{t.label}</p>
+              <span className={`h-3.5 w-3.5 rounded-full ${t.swatch}`} />
+              {t.label}
             </button>
           ))}
         </div>
+        <p className="mt-3 text-xs text-stone-400">
+          Sets the accent color of your public booking page.
+        </p>
       </div>
 
-      <div className="mb-6 rounded-3xl bg-white p-6 shadow">
-        <h2 className="mb-4 font-bold">🕐 Scheduling rules</h2>
+      <div className={cardCls}>
+        <h2 className="mb-5 text-sm font-semibold text-stone-900">Scheduling</h2>
 
-        <label className="mb-1 block text-xs font-bold text-neutral-500">Your timezone</label>
+        <label className={labelCls}>Timezone</label>
         <select
           value={settings.timezone}
           onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
-          className="mb-4 w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+          className={`mb-5 ${inputCls}`}
         >
           {tzList.map((tz) => (
-            <option key={tz} value={tz}>{tz.replace(/_/g, " ")}</option>
+            <option key={tz} value={tz}>
+              {tz.replace(/_/g, " ")}
+            </option>
           ))}
         </select>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label className="mb-1 block text-xs font-bold text-neutral-500">Min notice (hours)</label>
+            <label className={labelCls}>Minimum notice (hours)</label>
             <input
               type="number"
               min={0}
               value={settings.min_notice_hours}
-              onChange={(e) => setSettings({ ...settings, min_notice_hours: Number(e.target.value) })}
-              className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+              onChange={(e) =>
+                setSettings({ ...settings, min_notice_hours: Number(e.target.value) })
+              }
+              className={inputCls}
             />
-            <p className="mt-1 text-xs text-neutral-400">No last-minute surprises 🙅‍♀️</p>
+            <p className="mt-1.5 text-xs text-stone-400">How soon someone can book</p>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold text-neutral-500">Booking window (days)</label>
+            <label className={labelCls}>Booking window (days)</label>
             <input
               type="number"
               min={1}
               value={settings.booking_window_days}
-              onChange={(e) => setSettings({ ...settings, booking_window_days: Number(e.target.value) })}
-              className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+              onChange={(e) =>
+                setSettings({ ...settings, booking_window_days: Number(e.target.value) })
+              }
+              className={inputCls}
             />
-            <p className="mt-1 text-xs text-neutral-400">How far ahead people can book</p>
+            <p className="mt-1.5 text-xs text-stone-400">How far ahead they can book</p>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-bold text-neutral-500">Slot spacing (min)</label>
+            <label className={labelCls}>Slot interval</label>
             <select
               value={settings.slot_step_mins}
               onChange={(e) => setSettings({ ...settings, slot_step_mins: Number(e.target.value) })}
-              className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+              className={inputCls}
             >
               {[15, 30, 45, 60].map((s) => (
-                <option key={s} value={s}>every {s} min</option>
+                <option key={s} value={s}>
+                  Every {s} min
+                </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-neutral-400">How often slots start</p>
+            <p className="mt-1.5 text-xs text-stone-400">How often slots start</p>
           </div>
         </div>
       </div>
 
-      {error && <p className="mb-3 text-sm font-semibold text-rose-500">{error}</p>}
+      {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
       <button
         onClick={save}
         disabled={saving}
-        className="rounded-2xl bg-rose-400 px-8 py-3 font-bold text-white shadow transition hover:bg-rose-500 disabled:opacity-50"
+        className="rounded-xl bg-stone-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-700 disabled:opacity-50"
       >
-        {saving ? "Saving… ⏳" : saved ? "Saved! 🎀" : "Save settings ✨"}
+        {saving ? "Saving…" : saved ? "Saved" : "Save settings"}
       </button>
     </div>
   );

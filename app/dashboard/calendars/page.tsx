@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { MailIcon, PlusIcon } from "@/components/icons";
 
 type Account = {
   id: number;
@@ -45,67 +45,70 @@ function CalendarsInner() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-1 text-2xl font-bold">Calendars 📅</h1>
-      <p className="mb-6 text-neutral-500">
-        Connect all your Gmail accounts — busy times from <em>every</em> calendar are merged so
+      <h1 className="mb-1 text-2xl font-semibold tracking-tight">Calendars</h1>
+      <p className="mb-8 text-sm text-stone-500">
+        Connect every Google account you use. Busy times are merged across all of them, so
         you&apos;re never double-booked.
       </p>
 
       {connected && (
-        <div className="mb-4 rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-700">
-          🎉 Connected {connected}!
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+          Connected {connected}
         </div>
       )}
       {error && (
-        <div className="mb-4 rounded-2xl bg-rose-100 px-4 py-3 text-sm font-semibold text-rose-600">
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
           {error === "norefresh"
-            ? "Google didn't send a refresh token — try connecting again and make sure to approve access."
+            ? "Google didn't return a refresh token — please try connecting again and approve access."
             : error === "taken"
-              ? "That Google account is already connected to a different bookme profile 🙈"
-              : "Hmm, connecting didn't work. Try again?"}
+              ? "That Google account is already connected to a different bookme profile."
+              : "Connecting didn't work — please try again."}
         </div>
       )}
 
       <div className="mb-6 space-y-3">
-        {accounts === null && <p className="text-sm text-neutral-400">Loading… ⏳</p>}
+        {accounts === null && <p className="text-sm text-stone-400">Loading…</p>}
         {accounts?.length === 0 && (
-          <div className="rounded-3xl bg-white p-8 text-center shadow">
-            <div className="mb-2 text-4xl">🌱</div>
-            <p className="text-sm text-neutral-500">No calendars connected yet — add your first below!</p>
+          <div className="rounded-2xl border border-dashed border-stone-300 bg-white p-10 text-center">
+            <p className="text-sm text-stone-500">
+              No calendars connected yet — add your first below.
+            </p>
           </div>
         )}
         {accounts?.map((a) => (
-          <div key={a.id} className="rounded-3xl bg-white p-5 shadow">
+          <div key={a.id} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="text-2xl">✉️</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-stone-100 text-stone-500">
+                <MailIcon />
+              </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-bold">{a.email}</p>
-                <p className="text-xs text-neutral-400">
-                  {a.is_primary ? "⭐ bookings are created here" : "busy-time source"}
+                <p className="truncate text-sm font-semibold text-stone-900">{a.email}</p>
+                <p className="text-xs text-stone-400">
+                  {a.is_primary ? "Primary — bookings are created here" : "Busy-time source"}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 {!a.is_primary && (
                   <button
                     onClick={() => patch(a.id, "make_primary")}
-                    className="rounded-xl bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-200"
+                    className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 transition hover:border-stone-300 hover:bg-stone-50"
                   >
-                    Make primary ⭐
+                    Make primary
                   </button>
                 )}
                 <button
                   onClick={() => patch(a.id, "toggle_busy")}
-                  className={`rounded-xl px-3 py-1.5 text-xs font-bold ${
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                     a.include_in_busy
-                      ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                      : "bg-neutral-100 text-neutral-400 hover:bg-neutral-200"
+                      ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border border-stone-200 text-stone-400 hover:bg-stone-50"
                   }`}
                 >
-                  {a.include_in_busy ? "Checking busy ✓" : "Ignored 💤"}
+                  {a.include_in_busy ? "Checking busy" : "Ignored"}
                 </button>
                 <button
                   onClick={() => disconnect(a.id, a.email)}
-                  className="rounded-xl bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-100"
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                 >
                   Remove
                 </button>
@@ -117,12 +120,13 @@ function CalendarsInner() {
 
       <a
         href="/api/google/auth"
-        className="inline-block rounded-2xl bg-rose-400 px-6 py-3 font-bold text-white shadow transition hover:bg-rose-500"
+        className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-700"
       >
-        + Connect a Google account
+        <PlusIcon className="h-4 w-4" /> Connect a Google account
       </a>
-      <p className="mt-3 text-xs text-neutral-400">
-        You&apos;ll be sent to Google to approve calendar access. Repeat for each Gmail you use! 💌
+      <p className="mt-3 text-xs text-stone-400">
+        You&apos;ll be redirected to Google to approve calendar access. Repeat for each account you
+        use.
       </p>
     </div>
   );

@@ -1,50 +1,84 @@
 import Link from "next/link";
+import { CalendarIcon, GlobeIcon, VideoIcon, CheckIcon } from "@/components/icons";
 
 const FEATURES = [
-  { emoji: "📅", title: "All your Gmails, one schedule", text: "Connect every Google account — busy times merge so you're never double-booked." },
-  { emoji: "🌍", title: "Timezone magic", text: "Visitors see your open slots in their own timezone, automatically." },
-  { emoji: "🎥", title: "Meet links included", text: "Every booking creates a calendar invite with a Google Meet link for both of you." },
-  { emoji: "🎨", title: "5 dreamy themes", text: "Strawberry Milk, Lavender Haze, Matcha Latte, Blueberry Sky, Golden Hour." },
+  {
+    icon: CalendarIcon,
+    title: "Every calendar, one schedule",
+    text: "Connect all of your Google accounts. Busy times are merged across every calendar, so you're never double-booked.",
+  },
+  {
+    icon: GlobeIcon,
+    title: "Timezone-aware",
+    text: "Guests see your availability in their own timezone, automatically — no mental math on either side.",
+  },
+  {
+    icon: VideoIcon,
+    title: "Meet links, handled",
+    text: "Every booking creates a calendar event with a Google Meet link and sends the invite to both of you.",
+  },
+  {
+    icon: CheckIcon,
+    title: "Your rules",
+    text: "Weekly hours, buffers between meetings, minimum notice, and how far ahead people can book.",
+  },
 ];
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center bg-gradient-to-br from-rose-100 via-pink-50 to-orange-50 px-4 py-20">
-      <div className="w-full max-w-2xl text-center">
-        <div className="animate-floaty mb-4 inline-block text-7xl">🗓️</div>
-        <h1 className="mb-4 text-4xl font-bold sm:text-5xl">bookme 💖</h1>
-        <p className="mx-auto mb-8 max-w-md text-lg text-neutral-600">
-          Your own cute little booking page. Share one link, and people book time that actually
-          fits your calendars.
-        </p>
+    <main className="flex flex-1 flex-col bg-stone-50">
+      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
+        <span className="text-lg font-semibold tracking-tight">bookme</span>
+        <Link
+          href="/login"
+          className="rounded-lg px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
+        >
+          Sign in
+        </Link>
+      </header>
 
-        <div className="mb-14 flex flex-col items-center justify-center gap-3 sm:flex-row">
+      <section className="mx-auto w-full max-w-5xl px-6 pb-20 pt-16 text-center sm:pt-24">
+        <h1 className="mx-auto mb-5 max-w-2xl text-4xl font-semibold tracking-tight text-stone-900 sm:text-5xl">
+          One booking link that respects every calendar you have
+        </h1>
+        <p className="mx-auto mb-9 max-w-xl text-lg leading-relaxed text-stone-500">
+          Share your link. Guests pick a time that&apos;s genuinely free — across all your Google
+          accounts — and the invite lands on both calendars with a Meet link attached.
+        </p>
+        <div className="flex items-center justify-center gap-3">
           <Link
             href="/login"
-            className="rounded-2xl bg-rose-400 px-8 py-3.5 font-bold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-rose-500"
+            className="rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-700"
           >
-            Get your booking page ✨
+            Get your booking link
           </Link>
           <Link
             href="/login"
-            className="rounded-2xl bg-white/80 px-8 py-3.5 font-bold text-neutral-600 shadow transition hover:bg-white"
+            className="rounded-xl border border-stone-200 bg-white px-6 py-3 text-sm font-semibold text-stone-700 transition hover:border-stone-300"
           >
             Sign in
           </Link>
         </div>
+        <p className="mt-4 text-xs text-stone-400">Free · Sign in with Google</p>
+      </section>
 
-        <div className="grid gap-4 text-left sm:grid-cols-2">
+      <section className="mx-auto w-full max-w-5xl px-6 pb-24">
+        <div className="grid gap-px overflow-hidden rounded-2xl border border-stone-200 bg-stone-200 sm:grid-cols-2">
           {FEATURES.map((f) => (
-            <div key={f.title} className="rounded-3xl bg-white/90 p-6 shadow-lg backdrop-blur">
-              <div className="mb-2 text-3xl">{f.emoji}</div>
-              <h2 className="mb-1 font-bold">{f.title}</h2>
-              <p className="text-sm text-neutral-500">{f.text}</p>
+            <div key={f.title} className="bg-white p-8">
+              <div className="mb-4 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-stone-100 text-stone-700">
+                <f.icon className="h-4.5 w-4.5" />
+              </div>
+              <h2 className="mb-1.5 font-semibold text-stone-900">{f.title}</h2>
+              <p className="text-sm leading-relaxed text-stone-500">{f.text}</p>
             </div>
           ))}
         </div>
+      </section>
 
-        <p className="mt-14 text-xs text-neutral-400">made with 💖</p>
-      </div>
+      <footer className="border-t border-stone-200 py-8 text-center text-xs text-stone-400">
+        bookme
+      </footer>
     </main>
   );
 }

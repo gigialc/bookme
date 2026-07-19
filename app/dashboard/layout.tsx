@@ -2,16 +2,24 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
 import LogoutButton from "./LogoutButton";
+import {
+  HomeIcon,
+  TagIcon,
+  ClockIcon,
+  CalendarIcon,
+  ListIcon,
+  SettingsIcon,
+} from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
 const NAV = [
-  { href: "/dashboard", label: "Home", emoji: "🏡" },
-  { href: "/dashboard/event-types", label: "Event types", emoji: "💬" },
-  { href: "/dashboard/availability", label: "Availability", emoji: "🕐" },
-  { href: "/dashboard/calendars", label: "Calendars", emoji: "📅" },
-  { href: "/dashboard/bookings", label: "Bookings", emoji: "💖" },
-  { href: "/dashboard/settings", label: "Settings", emoji: "⚙️" },
+  { href: "/dashboard", label: "Overview", icon: HomeIcon },
+  { href: "/dashboard/event-types", label: "Event types", icon: TagIcon },
+  { href: "/dashboard/availability", label: "Availability", icon: ClockIcon },
+  { href: "/dashboard/calendars", label: "Calendars", icon: CalendarIcon },
+  { href: "/dashboard/bookings", label: "Bookings", icon: ListIcon },
+  { href: "/dashboard/settings", label: "Settings", icon: SettingsIcon },
 ];
 
 export default async function DashboardLayout({
@@ -28,26 +36,29 @@ export default async function DashboardLayout({
   if (!user) redirect("/login");
 
   return (
-    <div className="flex flex-1 flex-col bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50 sm:flex-row">
-      <aside className="flex shrink-0 flex-row items-center gap-1 overflow-x-auto border-b border-rose-100 bg-white/80 p-3 backdrop-blur sm:min-h-screen sm:w-56 sm:flex-col sm:items-stretch sm:border-b-0 sm:border-r sm:p-5">
-        <Link href="/dashboard" className="mb-0 hidden px-3 py-2 text-xl font-bold sm:mb-4 sm:block">
-          bookme 💖
+    <div className="flex flex-1 flex-col bg-stone-50 sm:flex-row">
+      <aside className="flex shrink-0 flex-row items-center gap-1 overflow-x-auto border-b border-stone-200 bg-white p-3 sm:min-h-screen sm:w-60 sm:flex-col sm:items-stretch sm:border-b-0 sm:border-r sm:p-4">
+        <Link
+          href="/dashboard"
+          className="mb-0 hidden px-3 py-2 text-lg font-semibold tracking-tight sm:mb-4 sm:block"
+        >
+          bookme
         </Link>
         {NAV.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-neutral-600 transition hover:bg-rose-50 hover:text-neutral-900"
+            className="flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900"
           >
-            <span>{item.emoji}</span>
+            <item.icon className="h-4 w-4 text-stone-400" />
             <span>{item.label}</span>
           </Link>
         ))}
-        <div className="ml-auto sm:ml-0 sm:mt-auto sm:pt-4">
+        <div className="ml-auto sm:ml-0 sm:mt-auto sm:border-t sm:border-stone-100 sm:pt-3">
           <LogoutButton />
         </div>
       </aside>
-      <main className="flex-1 p-4 sm:p-8">{children}</main>
+      <main className="flex-1 p-4 sm:p-10">{children}</main>
     </div>
   );
 }
