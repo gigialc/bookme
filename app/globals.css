@@ -1,35 +1,162 @@
 @import "tailwindcss";
 
+@theme {
+  --color-cream: #f4f0e5;
+  --color-ink: #1a1a1a;
+  --color-paper: #fffdf7;
+}
+
 :root {
-  --background: #fafaf9;
-  --foreground: #1c1917;
+  --background: #f4f0e5;
+  --foreground: #1a1a1a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-grotesk);
+  --font-mono: var(--font-space-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-family: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
 }
+
+/* ——— retro building blocks ——— */
+
+.card {
+  background: var(--color-paper);
+  border: 2px solid var(--color-ink);
+  border-radius: 12px;
+  box-shadow: 5px 5px 0 var(--color-ink);
+}
+
+.card-flat {
+  background: var(--color-paper);
+  border: 2px solid var(--color-ink);
+  border-radius: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px solid var(--color-ink);
+  border-radius: 10px;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-weight: 600;
+  box-shadow: 3px 3px 0 var(--color-ink);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--color-ink); }
+.btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--color-ink); }
+.btn:disabled { opacity: 0.5; pointer-events: none; }
+
+.btn-primary {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+
+.btn-plain {
+  border: 2px solid var(--color-ink);
+  border-radius: 10px;
+  background: var(--color-paper);
+  transition: background 0.1s ease;
+}
+.btn-plain:hover { background: #efe9d9; }
+
+/* System-1 style pinstriped title bar */
+.titlebar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-bottom: 2px solid var(--color-ink);
+  border-radius: 10px 10px 0 0;
+  padding: 0.5rem 0.9rem;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--color-paper) 0px,
+    var(--color-paper) 3px,
+    var(--color-ink) 3px,
+    var(--color-ink) 4px
+  );
+  background-clip: padding-box;
+}
+.titlebar-label {
+  background: var(--color-paper);
+  padding: 0 0.6rem;
+  font-family: var(--font-space-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.titlebar-box {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-paper);
+  flex-shrink: 0;
+}
+
+/* the classic six-color stripe */
+.rainbow {
+  background: linear-gradient(
+    to bottom,
+    #61bb46 0%, #61bb46 16.6%,
+    #fdb827 16.6%, #fdb827 33.3%,
+    #f5821f 33.3%, #f5821f 50%,
+    #e03a3e 50%, #e03a3e 66.6%,
+    #963d97 66.6%, #963d97 83.3%,
+    #009ddc 83.3%, #009ddc 100%
+  );
+}
+.rainbow-h {
+  background: linear-gradient(
+    to right,
+    #61bb46 0%, #61bb46 16.6%,
+    #fdb827 16.6%, #fdb827 33.3%,
+    #f5821f 33.3%, #f5821f 50%,
+    #e03a3e 50%, #e03a3e 66.6%,
+    #963d97 66.6%, #963d97 83.3%,
+    #009ddc 83.3%, #009ddc 100%
+  );
+}
+
+.mono-label {
+  font-family: var(--font-space-mono), monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.retro-input {
+  width: 100%;
+  border: 2px solid var(--color-ink);
+  border-radius: 10px;
+  background: var(--color-paper);
+  padding: 0.6rem 0.85rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+.retro-input:focus { box-shadow: 3px 3px 0 var(--color-ink); }
+.retro-input::placeholder { color: #a8a294; }
 
 @keyframes pop-in {
   0% { transform: scale(0.97); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
-.animate-pop {
-  animation: pop-in 0.2s ease-out both;
-}
+.animate-pop { animation: pop-in 0.2s ease-out both; }
 
 @keyframes fade-up {
   0% { transform: translateY(6px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
 }
-.animate-fade-up {
-  animation: fade-up 0.3s ease-out both;
-}
+.animate-fade-up { animation: fade-up 0.3s ease-out both; }

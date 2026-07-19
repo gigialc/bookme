@@ -54,27 +54,27 @@ export default function BookingsPage() {
   function Card({ b, showCancel }: { b: BookingRow; showCancel: boolean }) {
     return (
       <div
-        className={`rounded-2xl border border-stone-200 bg-white p-5 shadow-sm ${
+        className={`card p-5 ${
           b.status === "cancelled" ? "opacity-60" : ""
         }`}
       >
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xl">{b.event_emoji ?? "•"}</span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-stone-900">
+            <p className="text-sm font-bold">
               {b.name}{" "}
-              <span className="font-normal text-stone-400">· {b.event_name ?? "meeting"}</span>
+              <span className="font-normal text-ink/50">· {b.event_name ?? "meeting"}</span>
               {b.status === "cancelled" && (
                 <span className="ml-1.5 text-xs font-medium text-rose-500">cancelled</span>
               )}
             </p>
-            <p className="text-xs text-stone-500">
+            <p className="text-xs text-ink/60">
               {fmt(b.start_ts)} ·{" "}
-              <a href={`mailto:${b.email}`} className="underline underline-offset-2 hover:text-stone-700">
+              <a href={`mailto:${b.email}`} className="underline underline-offset-2 hover:text-ink/80">
                 {b.email}
               </a>
             </p>
-            {b.notes && <p className="mt-1 text-xs italic text-stone-400">“{b.notes}”</p>}
+            {b.notes && <p className="mt-1 text-xs italic text-ink/50">“{b.notes}”</p>}
           </div>
           <div className="flex gap-2">
             {b.meet_link && (
@@ -82,7 +82,7 @@ export default function BookingsPage() {
                 href={b.meet_link}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 transition hover:border-stone-300 hover:bg-stone-50"
+                className="inline-flex items-center gap-1.5 btn-plain px-3 py-1.5 text-xs font-semibold"
               >
                 <VideoIcon className="h-3.5 w-3.5" /> Join
               </a>
@@ -103,18 +103,18 @@ export default function BookingsPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">Bookings</h1>
-      <p className="mb-8 text-sm text-stone-500">Everyone who has booked time with you.</p>
+      <h1 className="mb-1 text-2xl font-bold tracking-tight">Bookings</h1>
+      <p className="mb-8 text-sm text-ink/60">Everyone who has booked time with you.</p>
 
-      {bookings === null && <p className="text-sm text-stone-400">Loading…</p>}
+      {bookings === null && <p className="text-sm text-ink/50">Loading…</p>}
 
       {bookings !== null && (
         <>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/50">
             Upcoming
           </h2>
           {upcoming.length === 0 ? (
-            <p className="mb-8 text-sm text-stone-400">
+            <p className="mb-8 text-sm text-ink/50">
               Nothing upcoming — share your booking link.
             </p>
           ) : (
@@ -127,7 +127,7 @@ export default function BookingsPage() {
 
           {past.length > 0 && (
             <>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/50">
                 Past &amp; cancelled
               </h2>
               <div className="space-y-3">

@@ -41,34 +41,34 @@ export default async function DashboardHome() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">
+      <h1 className="mb-1 text-2xl font-bold tracking-tight">
         Welcome back, {user.display_name}
       </h1>
-      <p className="mb-9 text-sm text-stone-500">Here&apos;s what&apos;s happening with your bookings.</p>
+      <p className="mb-9 text-sm text-ink/60">Here&apos;s what&apos;s happening with your bookings.</p>
 
       {!setupDone && (
-        <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold text-stone-900">Finish setting up</h2>
+        <div className="mb-6 card p-6">
+          <h2 className="mb-4 text-sm font-bold">Finish setting up</h2>
           <div className="space-y-1">
             {steps.map((s) => (
               <Link
                 key={s.label}
                 href={s.href}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-stone-50"
+                className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition hover:bg-cream"
               >
                 <span
                   className={`flex h-5 w-5 items-center justify-center rounded-full border ${
                     s.done
                       ? "border-emerald-200 bg-emerald-50 text-emerald-600"
-                      : "border-stone-300 text-transparent"
+                      : "border-ink/30 text-transparent"
                   }`}
                 >
                   <CheckIcon className="h-3 w-3" />
                 </span>
-                <span className={`text-sm ${s.done ? "text-stone-400 line-through" : "font-medium text-stone-700"}`}>
+                <span className={`text-sm ${s.done ? "text-ink/50 line-through" : "font-medium text-ink/80"}`}>
                   {s.label}
                 </span>
-                {!s.done && <ArrowRightIcon className="ml-auto h-4 w-4 text-stone-300" />}
+                {!s.done && <ArrowRightIcon className="ml-auto h-4 w-4 text-ink/30" />}
               </Link>
             ))}
           </div>
@@ -76,46 +76,46 @@ export default async function DashboardHome() {
       )}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+        <div className="card p-6">
           <p className="text-2xl font-semibold">{accountCount}</p>
-          <p className="mt-0.5 text-sm text-stone-500">
+          <p className="mt-0.5 text-sm text-ink/60">
             connected calendar{accountCount === 1 ? "" : "s"}
           </p>
         </div>
-        <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+        <div className="card p-6">
           <p className="text-2xl font-semibold">{eventTypeCount}</p>
-          <p className="mt-0.5 text-sm text-stone-500">
+          <p className="mt-0.5 text-sm text-ink/60">
             active event type{eventTypeCount === 1 ? "" : "s"}
           </p>
         </div>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-3 text-sm font-semibold text-stone-900">Your booking link</h2>
+      <div className="mb-6 card p-6">
+        <h2 className="mb-3 text-sm font-bold">Your booking link</h2>
         <CopyLink url={bookingUrl} />
-        <p className="mt-2.5 text-xs text-stone-400">
+        <p className="mt-2.5 text-xs text-ink/50">
           You can change your username in{" "}
-          <Link href="/dashboard/settings" className="underline underline-offset-2 hover:text-stone-600">
+          <Link href="/dashboard/settings" className="underline underline-offset-2 hover:text-ink/70">
             settings
           </Link>
           .
         </p>
       </div>
 
-      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold text-stone-900">Upcoming</h2>
+      <div className="card p-6">
+        <h2 className="mb-4 text-sm font-bold">Upcoming</h2>
         {upcoming.length === 0 ? (
-          <p className="text-sm text-stone-400">
+          <p className="text-sm text-ink/50">
             No upcoming bookings yet — share your link to get started.
           </p>
         ) : (
-          <ul className="divide-y divide-stone-100">
+          <ul className="divide-y divide-ink/10">
             {upcoming.map((b, i) => (
               <li key={i} className="flex items-center gap-3 py-3 text-sm first:pt-0 last:pb-0">
                 <span className="text-lg">{b.event_emoji ?? "•"}</span>
-                <span className="font-medium text-stone-900">{b.name}</span>
-                <span className="text-stone-400">{b.event_name ?? ""}</span>
-                <span className="ml-auto text-stone-500">
+                <span className="font-medium text-ink">{b.name}</span>
+                <span className="text-ink/50">{b.event_name ?? ""}</span>
+                <span className="ml-auto text-ink/60">
                   {new Date(b.start_ts).toLocaleString(undefined, {
                     weekday: "short",
                     month: "short",

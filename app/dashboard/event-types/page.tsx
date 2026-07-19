@@ -35,8 +35,8 @@ const EMPTY = {
 };
 
 const inputCls =
-  "w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-stone-300 focus:ring-2 focus:ring-stone-200";
-const labelCls = "mb-1.5 block text-xs font-semibold text-stone-500";
+  "retro-input";
+const labelCls = "mono-label mb-1.5 block text-ink/60";
 
 export default function EventTypesPage() {
   const [eventTypes, setEventTypes] = useState<EventType[] | null>(null);
@@ -79,30 +79,30 @@ export default function EventTypesPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">Event types</h1>
-      <p className="mb-8 text-sm text-stone-500">The kinds of meetings people can book with you.</p>
+      <h1 className="mb-1 text-2xl font-bold tracking-tight">Event types</h1>
+      <p className="mb-8 text-sm text-ink/60">The kinds of meetings people can book with you.</p>
 
       <div className="mb-6 space-y-3">
-        {eventTypes === null && <p className="text-sm text-stone-400">Loading…</p>}
+        {eventTypes === null && <p className="text-sm text-ink/50">Loading…</p>}
         {eventTypes?.map((et) => {
           const color = EVENT_COLORS[et.color] ?? EVENT_COLORS.rose;
           return (
             <div
               key={et.id}
-              className={`rounded-2xl border border-stone-200 bg-white p-5 shadow-sm ${et.active ? "" : "opacity-60"}`}
+              className={`card p-5 ${et.active ? "" : "opacity-60"}`}
             >
               <div className="flex flex-wrap items-center gap-3">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl ${color.chip}`}>
                   {et.emoji}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-stone-900">
+                  <p className="truncate text-sm font-bold">
                     {et.name}{" "}
                     {!et.active && (
-                      <span className="text-xs font-medium text-stone-400">(hidden)</span>
+                      <span className="text-xs font-medium text-ink/50">(hidden)</span>
                     )}
                   </p>
-                  <p className="text-xs text-stone-400">
+                  <p className="text-xs text-ink/50">
                     {et.duration_mins} min · {et.location} · /{et.slug}
                   </p>
                 </div>
@@ -111,14 +111,14 @@ export default function EventTypesPage() {
                     <a
                       href={`/${username}/${et.slug}`}
                       target="_blank"
-                      className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 transition hover:border-stone-300 hover:bg-stone-50"
+                      className="btn-plain px-3 py-1.5 text-xs font-semibold"
                     >
                       Preview
                     </a>
                   )}
                   <button
                     onClick={() => setEditing({ ...et })}
-                    className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 transition hover:border-stone-300 hover:bg-stone-50"
+                    className="btn-plain px-3 py-1.5 text-xs font-semibold"
                   >
                     Edit
                   </button>
@@ -138,15 +138,15 @@ export default function EventTypesPage() {
       {!editing && (
         <button
           onClick={() => setEditing({ ...EMPTY })}
-          className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-700"
+          className="btn btn-primary px-5 py-2.5 text-sm"
         >
           <PlusIcon className="h-4 w-4" /> New event type
         </button>
       )}
 
       {editing && (
-        <div className="animate-pop rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-5 text-sm font-semibold text-stone-900">
+        <div className="animate-pop card p-6">
+          <h2 className="mb-5 text-sm font-bold">
             {editing.id ? "Edit event type" : "New event type"}
           </h2>
 
@@ -166,8 +166,8 @@ export default function EventTypesPage() {
                 onClick={() => setEditing({ ...editing, emoji: e })}
                 className={`rounded-lg p-2 text-lg transition ${
                   editing.emoji === e
-                    ? "bg-stone-100 ring-2 ring-stone-300"
-                    : "hover:bg-stone-50"
+                    ? "bg-cream ring-2 ring-ink"
+                    : "hover:bg-cream"
                 }`}
               >
                 {e}
@@ -182,7 +182,7 @@ export default function EventTypesPage() {
                 key={key}
                 onClick={() => setEditing({ ...editing, color: key })}
                 className={`h-7 w-7 rounded-full transition ${EVENT_COLORS[key].dot} ${
-                  editing.color === key ? "ring-2 ring-stone-400 ring-offset-2" : ""
+                  editing.color === key ? "ring-2 ring-ink ring-offset-2" : ""
                 }`}
                 aria-label={key}
               />
@@ -197,8 +197,8 @@ export default function EventTypesPage() {
                 onClick={() => setEditing({ ...editing, duration_mins: d })}
                 className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${
                   editing.duration_mins === d
-                    ? "bg-stone-900 text-white"
-                    : "border border-stone-200 text-stone-600 hover:bg-stone-50"
+                    ? "border-2 border-ink bg-ink text-paper"
+                    : "border-2 border-ink/25 text-ink/70 hover:bg-cream"
                 }`}
               >
                 {d} min
@@ -222,7 +222,7 @@ export default function EventTypesPage() {
             placeholder="Google Meet"
             className={`mb-1.5 ${inputCls}`}
           />
-          <p className="mb-4 text-xs text-stone-400">
+          <p className="mb-4 text-xs text-ink/50">
             If it contains &quot;Meet&quot;, a Google Meet link is added automatically.
           </p>
 
@@ -249,12 +249,12 @@ export default function EventTypesPage() {
             </div>
           </div>
 
-          <label className="mb-5 flex items-center gap-2 text-sm font-medium text-stone-700">
+          <label className="mb-5 flex items-center gap-2 text-sm font-medium text-ink/80">
             <input
               type="checkbox"
               checked={editing.active}
               onChange={(e) => setEditing({ ...editing, active: e.target.checked })}
-              className="h-4 w-4 accent-stone-900"
+              className="h-4 w-4 accent-ink"
             />
             Visible on your booking page
           </label>
@@ -263,13 +263,13 @@ export default function EventTypesPage() {
             <button
               onClick={save}
               disabled={saving || !editing.name.trim()}
-              className="rounded-xl bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-700 disabled:opacity-50"
+              className="btn btn-primary px-5 py-2.5 text-sm"
             >
               {saving ? "Saving…" : "Save"}
             </button>
             <button
               onClick={() => setEditing(null)}
-              className="rounded-xl border border-stone-200 px-5 py-2.5 text-sm font-semibold text-stone-600 transition hover:bg-stone-50"
+              className="btn-plain px-5 py-2.5 text-sm font-semibold"
             >
               Cancel
             </button>

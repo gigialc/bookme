@@ -35,9 +35,9 @@ const COMMON_TIMEZONES = [
 ];
 
 const inputCls =
-  "w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm outline-none transition placeholder:text-stone-400 focus:border-stone-300 focus:ring-2 focus:ring-stone-200";
-const labelCls = "mb-1.5 block text-xs font-semibold text-stone-500";
-const cardCls = "mb-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm";
+  "retro-input";
+const labelCls = "mono-label mb-1.5 block text-ink/60";
+const cardCls = "mb-6 card p-6";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -72,7 +72,7 @@ export default function SettingsPage() {
     setSaving(false);
   }
 
-  if (!settings) return <p className="text-sm text-stone-400">Loading…</p>;
+  if (!settings) return <p className="text-sm text-ink/50">Loading…</p>;
 
   const tzList = COMMON_TIMEZONES.includes(settings.timezone)
     ? COMMON_TIMEZONES
@@ -80,24 +80,24 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">Settings</h1>
-      <p className="mb-8 text-sm text-stone-500">
+      <h1 className="mb-1 text-2xl font-bold tracking-tight">Settings</h1>
+      <p className="mb-8 text-sm text-ink/60">
         Your public profile and scheduling preferences.
       </p>
 
       <div className={cardCls}>
-        <h2 className="mb-5 text-sm font-semibold text-stone-900">Profile</h2>
+        <h2 className="mb-5 text-sm font-bold">Profile</h2>
 
         <label className={labelCls}>Username</label>
         <div className="mb-1.5 flex items-center gap-2">
-          <span className="text-sm text-stone-400">/</span>
+          <span className="text-sm text-ink/50">/</span>
           <input
             value={settings.username}
             onChange={(e) => setSettings({ ...settings, username: e.target.value.toLowerCase() })}
             className={inputCls}
           />
         </div>
-        <p className="mb-5 text-xs text-stone-400">
+        <p className="mb-5 text-xs text-ink/50">
           Your booking link: {typeof window !== "undefined" ? window.location.origin : ""}/
           {settings.username} · signed in as {settings.email}
         </p>
@@ -119,7 +119,7 @@ export default function SettingsPage() {
       </div>
 
       <div className={cardCls}>
-        <h2 className="mb-5 text-sm font-semibold text-stone-900">Theme</h2>
+        <h2 className="mb-5 text-sm font-bold">Theme</h2>
         <div className="flex flex-wrap gap-3">
           {Object.values(THEMES).map((t) => (
             <button
@@ -127,8 +127,8 @@ export default function SettingsPage() {
               onClick={() => setSettings({ ...settings, theme: t.key })}
               className={`flex items-center gap-2.5 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
                 settings.theme === t.key
-                  ? "border-stone-400 bg-stone-50 text-stone-900"
-                  : "border-stone-200 text-stone-600 hover:border-stone-300"
+                  ? "border-ink bg-cream text-ink"
+                  : "border-ink/25 text-ink/70 hover:border-ink"
               }`}
             >
               <span className={`h-3.5 w-3.5 rounded-full ${t.swatch}`} />
@@ -136,13 +136,13 @@ export default function SettingsPage() {
             </button>
           ))}
         </div>
-        <p className="mt-3 text-xs text-stone-400">
+        <p className="mt-3 text-xs text-ink/50">
           Sets the accent color of your public booking page.
         </p>
       </div>
 
       <div className={cardCls}>
-        <h2 className="mb-5 text-sm font-semibold text-stone-900">Scheduling</h2>
+        <h2 className="mb-5 text-sm font-bold">Scheduling</h2>
 
         <label className={labelCls}>Timezone</label>
         <select
@@ -169,7 +169,7 @@ export default function SettingsPage() {
               }
               className={inputCls}
             />
-            <p className="mt-1.5 text-xs text-stone-400">How soon someone can book</p>
+            <p className="mt-1.5 text-xs text-ink/50">How soon someone can book</p>
           </div>
           <div>
             <label className={labelCls}>Booking window (days)</label>
@@ -182,7 +182,7 @@ export default function SettingsPage() {
               }
               className={inputCls}
             />
-            <p className="mt-1.5 text-xs text-stone-400">How far ahead they can book</p>
+            <p className="mt-1.5 text-xs text-ink/50">How far ahead they can book</p>
           </div>
           <div>
             <label className={labelCls}>Slot interval</label>
@@ -197,7 +197,7 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-1.5 text-xs text-stone-400">How often slots start</p>
+            <p className="mt-1.5 text-xs text-ink/50">How often slots start</p>
           </div>
         </div>
       </div>
@@ -206,7 +206,7 @@ export default function SettingsPage() {
       <button
         onClick={save}
         disabled={saving}
-        className="rounded-xl bg-stone-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-700 disabled:opacity-50"
+        className="btn btn-primary px-6 py-2.5 text-sm"
       >
         {saving ? "Saving…" : saved ? "Saved" : "Save settings"}
       </button>

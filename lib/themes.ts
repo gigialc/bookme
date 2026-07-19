@@ -16,7 +16,7 @@ export const THEMES: Record<string, Theme> = {
   rose: {
     key: "rose",
     label: "Rose",
-    pageBg: "bg-gradient-to-b from-rose-50/80 via-stone-50 to-stone-50",
+    pageBg: "bg-cream",
     accentBg: "bg-rose-600",
     accentBgHover: "hover:bg-rose-700",
     accentText: "text-white",
@@ -29,7 +29,7 @@ export const THEMES: Record<string, Theme> = {
   violet: {
     key: "violet",
     label: "Violet",
-    pageBg: "bg-gradient-to-b from-violet-50/80 via-stone-50 to-stone-50",
+    pageBg: "bg-cream",
     accentBg: "bg-violet-600",
     accentBgHover: "hover:bg-violet-700",
     accentText: "text-white",
@@ -42,7 +42,7 @@ export const THEMES: Record<string, Theme> = {
   emerald: {
     key: "emerald",
     label: "Emerald",
-    pageBg: "bg-gradient-to-b from-emerald-50/80 via-stone-50 to-stone-50",
+    pageBg: "bg-cream",
     accentBg: "bg-emerald-600",
     accentBgHover: "hover:bg-emerald-700",
     accentText: "text-white",
@@ -55,7 +55,7 @@ export const THEMES: Record<string, Theme> = {
   sky: {
     key: "sky",
     label: "Sky",
-    pageBg: "bg-gradient-to-b from-sky-50/80 via-stone-50 to-stone-50",
+    pageBg: "bg-cream",
     accentBg: "bg-sky-600",
     accentBgHover: "hover:bg-sky-700",
     accentText: "text-white",
@@ -68,7 +68,7 @@ export const THEMES: Record<string, Theme> = {
   amber: {
     key: "amber",
     label: "Amber",
-    pageBg: "bg-gradient-to-b from-amber-50/80 via-stone-50 to-stone-50",
+    pageBg: "bg-cream",
     accentBg: "bg-amber-600",
     accentBgHover: "hover:bg-amber-700",
     accentText: "text-white",

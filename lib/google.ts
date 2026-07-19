@@ -143,3 +143,90 @@ export async function cancelBookingEvent(account: Account, eventId: string): Pro
   const calendar = google.calendar({ version: "v3", auth });
   await calendar.events.delete({ calendarId: "primary", eventId, sendUpdates: "all" });
 }
+
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  startIso: string;
+  endIso: string;
+  allDay: boolean;
+  accountEmail: string;
+  meetLink: string | null;
+};
+
+/** Fetch actual events (with titles) across every calendar of one account. */
+export async function eventsForAccount(
+  account: Account,
+  timeMinIso: string,
+  timeMaxIso: string
+): Promise<CalendarEvent[]> {
+  const auth = authedClient(account.refresh_token);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const calList = await calendar.calendarList.list({ maxResults: 50 });
+  const cals = (calList.data.items ?? [])
+    .filter((c) => c.selected !== false || c.primary)
+    .slice(0, 15);
+
+  const results = await Promise.allSettled(
+    cals.map((c) =>
+      calendar.events.list({
+        calendarId: c.id!,
+        timeMin: timeMinIso,
+        timeMax: timeMaxIso,
+        singleEvents: true,
+        orderBy: "startTime",
+        maxResults: 100,
+      })
+    )
+  );
+
+  const events: CalendarEvent[] = [];
+  for (const r of results) {
+    if (r.status !== "fulfilled") continue;
+    for (const e of r.value.data.items ?? []) {
+      if (e.status === "cancelled") continue;
+      const start = e.start?.dateTime ?? e.start?.date;
+      const end = e.end?.dateTime ?? e.end?.date;
+      if (!start || !end) continue;
+      events.push({
+        id: e.iCalUID ?? e.id ?? `${start}-${e.summary}`,
+        title: e.summary || "(no title)",
+        startIso: start,
+        endIso: end,
+        allDay: !e.start?.dateTime,
+        accountEmail: account.email,
+        meetLink: e.hangoutLink ?? null,
+      });
+    }
+  }
+  return events;
+}
+
+/** Merge events across all of a user's connected accounts, deduped. */
+export async function allCalendarEvents(
+  userId: number,
+  timeMinIso: string,
+  timeMaxIso: string
+): Promise<{ events: CalendarEvent[]; accounts: string[] }> {
+  const accounts = await query<Account>(
+    "SELECT * FROM accounts WHERE user_id = $1 ORDER BY id ASC",
+    [userId]
+  );
+  const results = await Promise.allSettled(
+    accounts.map((a) => eventsForAccount(a, timeMinIso, timeMaxIso))
+  );
+  const seen = new Set<string>();
+  const events: CalendarEvent[] = [];
+  for (const r of results) {
+    if (r.status !== "fulfilled") continue;
+    for (const e of r.value) {
+      const key = `${e.id}|${e.startIso}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      events.push(e);
+    }
+  }
+  events.sort((a, b) => a.startIso.localeCompare(b.startIso));
+  return { events, accounts: accounts.map((a) => a.email) };
+}
