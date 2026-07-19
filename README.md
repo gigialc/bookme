@@ -1,76 +1,70 @@
 # bookme 💖
 
-Your own personal Calendly! Connect all your Gmail accounts, and people book calls with you
-through a cute little booking page. Busy times from **every** connected calendar are merged, so
-you're never double-booked.
+A cute little multi-user Calendly! Anyone can sign in, connect all their Gmail accounts, and get
+their own booking page (like `yoursite.com/georgina`). Busy times from **every** connected
+calendar are merged, so nobody gets double-booked.
 
 ## What's inside
 
-- 🗓️ **Public booking page** — visitors pick a day + time (shown in *their* timezone) and book
-- 📅 **Multiple Google accounts** — connect as many Gmails as you want; all their calendars count as "busy"
-- 🎥 **Google Meet links** created automatically + calendar invites emailed to both of you
+- 👯 **Multi-user** — everyone who signs in gets their own page, settings, and calendars
+- 🔑 **Sign in with Google** via [Neon Auth](https://neon.com/docs/neon-auth/overview) (no scary warnings — login uses only basic profile scopes)
+- 📅 **Multiple Google accounts per person** — all their calendars count as "busy"
+- 🎥 **Google Meet links** created automatically + calendar invites emailed to both sides
 - 🎊 **Confetti** when someone books (obviously)
 - 🎨 **5 cute themes** — Strawberry Milk, Lavender Haze, Matcha Latte, Blueberry Sky, Golden Hour
-- ⚙️ **Settings** — timezone, minimum notice, booking window, slot spacing, welcome message
-- 💬 **Event types** — different call types with emoji, duration, buffers, and colors
-- 🕐 **Weekly availability** editor with multiple windows per day
-- 🔐 **Password-protected dashboard** with upcoming bookings + one-click cancel
+- ⚙️ **Per-user settings** — username, timezone, minimum notice, booking window, slot spacing
+- 💬 **Event types** with emoji, duration, buffers, colors · 🕐 weekly availability editor
+- 💖 Bookings list with one-click cancel (deletes the Google event + emails the guest)
 
-## Setup (one time, ~15 minutes)
+## Setup (one time)
 
-### 1. Database (Neon)
+### 1. Neon — database + auth
 
-1. Go to [neon.tech](https://neon.tech) → create a project called `bookme`
-2. Copy the connection string (starts with `postgres://`)
+1. Create a project at [neon.tech](https://neon.tech)
+2. Copy the **connection string** → `DATABASE_URL` (app tables create themselves on first run)
+3. Open the project's **Auth** tab → enable Neon Auth → copy the **base URL** → `NEON_AUTH_BASE_URL`
+4. Make sure **Google** is enabled as a sign-in method in the Auth settings
+5. `openssl rand -base64 32` → `NEON_AUTH_COOKIE_SECRET`
 
-The tables create themselves on first run — nothing else to do 🎉
+### 2. Google Cloud — calendar connections
 
-### 2. Google setup (so "Connect Google account" works)
+This powers the "Connect a Google account" button (calendar access, Meet links):
 
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) → create a project (call it `bookme`)
-2. **APIs & Services → Library** → search **Google Calendar API** → Enable
-3. **APIs & Services → OAuth consent screen**
-   - User type: **External**, fill in app name + your email
-   - Add yourself (each Gmail you'll connect) under **Test users**
-4. **APIs & Services → Credentials → Create credentials → OAuth client ID**
-   - Application type: **Web application**
-   - Authorized redirect URIs — add BOTH:
+1. [console.cloud.google.com](https://console.cloud.google.com) → create a project
+2. **APIs & Services → Library** → enable **Google Calendar API**
+3. **OAuth consent screen** → External → fill in name + email
+4. **Credentials → Create credentials → OAuth client ID** → Web application
+   - Authorized redirect URIs (add both):
      - `http://localhost:3000/api/google/callback`
-     - `https://YOUR-VERCEL-URL/api/google/callback` (add after deploying)
-5. Copy the **Client ID** and **Client Secret**
+     - `https://YOUR-PRODUCTION-URL/api/google/callback`
+5. Copy Client ID + Secret → `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 
-### 3. Environment variables
+> **About the "unverified app" screen:** Calendar scopes are *sensitive*, so until the app passes
+> Google's (free) verification review, people connecting a calendar see a warning and must be
+> added as **Test users** (max 100) or click *Advanced → Continue*. Sign-in itself never shows a
+> warning — it's only the calendar-connect step. When you're ready for the public, submit the
+> OAuth consent screen for verification; that's the same one-time process every scheduling app
+> goes through.
 
-```bash
-cp .env.example .env.local
-```
-
-Fill in `DATABASE_URL`, `APP_PASSWORD` (your dashboard password — pick anything),
-`GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET`.
-
-### 4. Run it!
+### 3. Run it
 
 ```bash
+cp .env.example .env.local   # fill in the values
+npm install
 npm run dev
 ```
 
-Open http://localhost:3000/login → log in → follow the setup checklist
-(connect calendar → create an event type → set your hours). Then share your link! 💌
+Open http://localhost:3000 → sign in → follow the checklist → share your link! 💌
 
 ## Deploying to Vercel
 
-```bash
-vercel
-```
-
-Then in the Vercel dashboard → Settings → Environment Variables, add the same four variables
-plus `NEXT_PUBLIC_APP_URL` set to your production URL (e.g. `https://bookme-xxx.vercel.app`).
-Finally, add the production redirect URI to your Google OAuth client (step 2.4 above).
+1. `vercel` (or import the repo at vercel.com)
+2. Add all env vars from `.env.example`, with `NEXT_PUBLIC_APP_URL` = your production URL
+3. Add the production redirect URI to your Google OAuth client (step 2.4)
+4. In Neon Auth settings, add your production domain to the allowed origins/redirects
 
 ## Notes
 
-- **Primary account** ⭐ = where booked events are created (and whose Gmail sends the invites).
-  Every other account just contributes busy times. Change it on the Calendars page.
-- If Google says the app is "unverified", that's fine — it's your personal app; click
-  *Advanced → Continue*. Just make sure each Gmail is added as a Test user.
-- Cancelling a booking from the dashboard also deletes the Google event and emails the guest.
+- **Primary account** ⭐ = where booked events are created (and whose Gmail sends invites).
+  Other accounts just contribute busy times. Change it on the Calendars page.
+- Usernames are claimable on the Settings page (lowercase letters, numbers, dashes).

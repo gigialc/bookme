@@ -1,8 +1,16 @@
 import { DateTime, Interval } from "luxon";
-import { AvailabilityRule, EventType, Settings } from "./db";
+import { AvailabilityRule, EventType } from "./db";
 import { BusyInterval } from "./google";
 
 export type Slot = { startIso: string; endIso: string };
+
+/** The scheduling fields of a user row (User satisfies this structurally). */
+export type ScheduleConfig = {
+  timezone: string;
+  min_notice_hours: number;
+  booking_window_days: number;
+  slot_step_mins: number;
+};
 
 /**
  * Compute bookable slots for one calendar day as seen by the visitor.
@@ -13,7 +21,7 @@ export type Slot = { startIso: string; endIso: string };
 export function computeSlots(opts: {
   dateIso: string; // "2026-07-21" in the visitor's timezone
   visitorTz: string;
-  settings: Settings;
+  settings: ScheduleConfig;
   eventType: EventType;
   rules: AvailabilityRule[];
   busy: BusyInterval[];

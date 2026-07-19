@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, AvailabilityRule } from "@/lib/db";
-import { requireAdmin } from "@/lib/admin";
+import { requireUser } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const userId = await requireUser();
+  if (userId instanceof NextResponse) return userId;
   const rows = await query<AvailabilityRule>(
-    "SELECT * FROM availability ORDER BY weekday, start_time"
+    "SELECT * FROM availability WHERE user_id = $1 ORDER BY weekday, start_time",
+    [userId]
   );
   return NextResponse.json({ rules: rows });
 }
@@ -16,8 +17,8 @@ export async function GET() {
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export async function PUT(req: NextRequest) {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const userId = await requireUser();
+  if (userId instanceof NextResponse) return userId;
   const b = await req.json();
   const rules: { weekday: number; start_time: string; end_time: string }[] = b.rules ?? [];
 
@@ -30,15 +31,16 @@ export async function PUT(req: NextRequest) {
     }
   }
 
-  await query("DELETE FROM availability");
+  await query("DELETE FROM availability WHERE user_id = $1", [userId]);
   for (const r of rules) {
     await query(
-      "INSERT INTO availability (weekday, start_time, end_time) VALUES ($1, $2, $3)",
-      [r.weekday, r.start_time, r.end_time]
+      "INSERT INTO availability (user_id, weekday, start_time, end_time) VALUES ($1, $2, $3, $4)",
+      [userId, r.weekday, r.start_time, r.end_time]
     );
   }
   const rows = await query<AvailabilityRule>(
-    "SELECT * FROM availability ORDER BY weekday, start_time"
+    "SELECT * FROM availability WHERE user_id = $1 ORDER BY weekday, start_time",
+    [userId]
   );
   return NextResponse.json({ rules: rows });
 }

@@ -17,6 +17,7 @@ type PublicEventType = {
 type Slot = { startIso: string; endIso: string };
 
 export default function BookingClient({
+  username,
   eventType,
   displayName,
   themeKey,
@@ -24,6 +25,7 @@ export default function BookingClient({
   availableWeekdays,
   ownerTimezone,
 }: {
+  username: string;
   eventType: PublicEventType;
   displayName: string;
   themeKey: string;
@@ -66,7 +68,7 @@ export default function BookingClient({
       setError("");
       try {
         const res = await fetch(
-          `/api/slots?slug=${encodeURIComponent(eventType.slug)}&date=${dateIso}&tz=${encodeURIComponent(visitorTz)}`
+          `/api/slots?username=${encodeURIComponent(username)}&slug=${encodeURIComponent(eventType.slug)}&date=${dateIso}&tz=${encodeURIComponent(visitorTz)}`
         );
         const data = await res.json();
         setSlots(data.slots ?? []);
@@ -77,7 +79,7 @@ export default function BookingClient({
         setLoadingSlots(false);
       }
     },
-    [eventType.slug, visitorTz]
+    [username, eventType.slug, visitorTz]
   );
 
   async function book(e: React.FormEvent) {
@@ -89,6 +91,7 @@ export default function BookingClient({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        username,
         slug: eventType.slug,
         startIso: selectedSlot.startIso,
         name: form.name,

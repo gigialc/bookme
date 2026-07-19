@@ -66,9 +66,14 @@ export async function busyForAccount(
   return busy;
 }
 
-export async function allBusy(timeMinIso: string, timeMaxIso: string): Promise<BusyInterval[]> {
+export async function allBusy(
+  userId: number,
+  timeMinIso: string,
+  timeMaxIso: string
+): Promise<BusyInterval[]> {
   const accounts = await query<Account>(
-    "SELECT * FROM accounts WHERE include_in_busy = TRUE"
+    "SELECT * FROM accounts WHERE user_id = $1 AND include_in_busy = TRUE",
+    [userId]
   );
   const results = await Promise.allSettled(
     accounts.map((a) => busyForAccount(a, timeMinIso, timeMaxIso))
@@ -78,9 +83,10 @@ export async function allBusy(timeMinIso: string, timeMaxIso: string): Promise<B
   return busy;
 }
 
-export async function getPrimaryAccount(): Promise<Account | null> {
+export async function getPrimaryAccount(userId: number): Promise<Account | null> {
   const rows = await query<Account>(
-    "SELECT * FROM accounts ORDER BY is_primary DESC, id ASC LIMIT 1"
+    "SELECT * FROM accounts WHERE user_id = $1 ORDER BY is_primary DESC, id ASC LIMIT 1",
+    [userId]
   );
   return rows[0] ?? null;
 }

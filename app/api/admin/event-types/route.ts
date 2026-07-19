@@ -1,29 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { query, EventType } from "@/lib/db";
-import { requireAdmin, slugify } from "@/lib/admin";
+import { requireUser, slugify } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const denied = await requireAdmin();
-  if (denied) return denied;
-  const rows = await query<EventType>("SELECT * FROM event_types ORDER BY id ASC");
+  const userId = await requireUser();
+  if (userId instanceof NextResponse) return userId;
+  const rows = await query<EventType>(
+    "SELECT * FROM event_types WHERE user_id = $1 ORDER BY id ASC",
+    [userId]
+  );
   return NextResponse.json({ eventTypes: rows });
 }
 
 export async function POST(req: NextRequest) {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const userId = await requireUser();
+  if (userId instanceof NextResponse) return userId;
   const b = await req.json();
 
   let slug = slugify(b.name ?? "chat");
-  const clash = await query("SELECT id FROM event_types WHERE slug = $1", [slug]);
+  const clash = await query(
+    "SELECT id FROM event_types WHERE user_id = $1 AND slug = $2",
+    [userId, slug]
+  );
   if (clash.length > 0) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
 
   const [row] = await query<EventType>(
-    `INSERT INTO event_types (slug, name, emoji, description, duration_mins, buffer_before, buffer_after, color, location, active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE) RETURNING *`,
+    `INSERT INTO event_types (user_id, slug, name, emoji, description, duration_mins, buffer_before, buffer_after, color, location, active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE) RETURNING *`,
     [
+      userId,
       slug,
       b.name || "New chat",
       b.emoji || "💬",
@@ -39,18 +46,19 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const userId = await requireUser();
+  if (userId instanceof NextResponse) return userId;
   const b = await req.json();
   if (!b.id) return NextResponse.json({ error: "missing id" }, { status: 400 });
 
   const [row] = await query<EventType>(
     `UPDATE event_types SET
-       name = $2, emoji = $3, description = $4, duration_mins = $5,
-       buffer_before = $6, buffer_after = $7, color = $8, location = $9, active = $10
-     WHERE id = $1 RETURNING *`,
+       name = $3, emoji = $4, description = $5, duration_mins = $6,
+       buffer_before = $7, buffer_after = $8, color = $9, location = $10, active = $11
+     WHERE id = $1 AND user_id = $2 RETURNING *`,
     [
       b.id,
+      userId,
       b.name || "Chat",
       b.emoji || "💬",
       b.description ?? "",
@@ -62,14 +70,14 @@ export async function PUT(req: NextRequest) {
       b.active !== false,
     ]
   );
-  return NextResponse.json({ eventType: row });
+  return NextResponse.json({ eventType: row ?? null });
 }
 
 export async function DELETE(req: NextRequest) {
-  const denied = await requireAdmin();
-  if (denied) return denied;
+  const userId = await requireUser();
+  if (userId instanceof NextResponse) return userId;
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "missing id" }, { status: 400 });
-  await query("DELETE FROM event_types WHERE id = $1", [id]);
+  await query("DELETE FROM event_types WHERE id = $1 AND user_id = $2", [id, userId]);
   return NextResponse.json({ ok: true });
 }

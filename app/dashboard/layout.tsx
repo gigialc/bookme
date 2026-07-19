@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isLoggedIn } from "@/lib/auth";
+import { getSessionUser } from "@/lib/auth";
 import LogoutButton from "./LogoutButton";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,13 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (!(await isLoggedIn())) redirect("/login");
+  let user = null;
+  try {
+    user = await getSessionUser();
+  } catch {
+    // DB not configured yet — let the dashboard page show setup help.
+  }
+  if (!user) redirect("/login");
 
   return (
     <div className="flex flex-1 flex-col bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50 sm:flex-row">

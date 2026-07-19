@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { isLoggedIn } from "./auth";
+import { sessionUserId } from "./auth";
 
-export async function requireAdmin(): Promise<NextResponse | null> {
-  if (await isLoggedIn()) return null;
+/** Returns the logged-in user id, or a 401 response to return as-is. */
+export async function requireUser(): Promise<number | NextResponse> {
+  const userId = await sessionUserId();
+  if (userId !== null) return userId;
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 }
 

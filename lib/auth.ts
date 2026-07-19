@@ -1,34 +1,46 @@
-import { createHmac, timingSafeEqual } from "crypto";
-import { cookies } from "next/headers";
+import { getAuth } from "./neon-auth";
+import { query, usernameFromEmail, User } from "./db";
 
-const COOKIE_NAME = "bookme_session";
-
-function secret(): string {
-  const s = process.env.SESSION_SECRET || process.env.APP_PASSWORD;
-  if (!s) throw new Error("Set APP_PASSWORD (and optionally SESSION_SECRET) in .env.local");
-  return s;
-}
-
-export function sessionToken(): string {
-  return createHmac("sha256", secret()).update("bookme-owner-session").digest("hex");
-}
-
-export function passwordIsCorrect(password: string): boolean {
-  const expected = process.env.APP_PASSWORD;
-  if (!expected) return false;
-  const a = Buffer.from(password);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
-export async function isLoggedIn(): Promise<boolean> {
+/**
+ * The logged-in app user, or null. Looks up the Neon Auth session and
+ * lazily creates our own users row (username, scheduling prefs) on first visit.
+ */
+export async function getSessionUser(): Promise<User | null> {
+  let authUser: { id: string; email?: string | null; name?: string | null } | null = null;
   try {
-    const store = await cookies();
-    const token = store.get(COOKIE_NAME)?.value;
-    return token === sessionToken();
+    const { data: session } = await getAuth().getSession();
+    authUser = session?.user ?? null;
   } catch {
-    return false;
+    return null;
   }
+  if (!authUser?.email) return null;
+  const email = authUser.email.toLowerCase();
+
+  const [byAuthId] = await query<User>("SELECT * FROM users WHERE auth_id = $1", [authUser.id]);
+  if (byAuthId) return byAuthId;
+
+  // Link an existing row by email (e.g. auth provider re-created the user).
+  const [byEmail] = await query<User>("SELECT * FROM users WHERE email = $1", [email]);
+  if (byEmail) {
+    const [linked] = await query<User>(
+      "UPDATE users SET auth_id = $2 WHERE id = $1 RETURNING *",
+      [byEmail.id, authUser.id]
+    );
+    return linked;
+  }
+
+  const username = await usernameFromEmail(email);
+  const displayName = authUser.name?.split(" ")[0] || username;
+  const [created] = await query<User>(
+    `INSERT INTO users (auth_id, email, username, display_name) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (email) DO UPDATE SET auth_id = EXCLUDED.auth_id
+     RETURNING *`,
+    [authUser.id, email, username, displayName]
+  );
+  return created;
 }
 
-export const SESSION_COOKIE = COOKIE_NAME;
+export async function sessionUserId(): Promise<number | null> {
+  const user = await getSessionUser();
+  return user?.id ?? null;
+}

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { isLoggedIn } from "@/lib/auth";
-import { oauthClient, GOOGLE_SCOPES } from "@/lib/google";
+import { sessionUserId } from "@/lib/auth";
+import { oauthClient, GOOGLE_SCOPES, appUrl } from "@/lib/google";
 
 export const dynamic = "force-dynamic";
 
+// Starts the Google OAuth flow to connect a calendar account
+// to the currently signed-in user.
 export async function GET() {
-  if (!(await isLoggedIn())) {
-    return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"));
+  if ((await sessionUserId()) === null) {
+    return NextResponse.redirect(new URL("/login", appUrl()));
   }
   const url = oauthClient().generateAuthUrl({
     access_type: "offline",

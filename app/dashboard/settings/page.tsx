@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { THEMES } from "@/lib/themes";
 
 type Settings = {
+  email: string;
+  username: string;
   display_name: string;
   welcome_message: string;
   timezone: string;
@@ -36,6 +38,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -46,14 +49,20 @@ export default function SettingsPage() {
   async function save() {
     if (!settings) return;
     setSaving(true);
+    setError("");
     const res = await fetch("/api/admin/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(settings),
     });
     if (res.ok) {
+      const d = await res.json();
+      setSettings(d.settings);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "Couldn't save — try again?");
     }
     setSaving(false);
   }
@@ -71,6 +80,19 @@ export default function SettingsPage() {
 
       <div className="mb-6 rounded-3xl bg-white p-6 shadow">
         <h2 className="mb-4 font-bold">🌸 Profile</h2>
+
+        <label className="mb-1 block text-xs font-bold text-neutral-500">Username</label>
+        <div className="mb-1 flex items-center gap-1">
+          <span className="text-sm text-neutral-400">/</span>
+          <input
+            value={settings.username}
+            onChange={(e) => setSettings({ ...settings, username: e.target.value.toLowerCase() })}
+            className="w-full rounded-xl border border-neutral-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-300"
+          />
+        </div>
+        <p className="mb-4 text-xs text-neutral-400">
+          Your booking link: {typeof window !== "undefined" ? window.location.origin : ""}/{settings.username} · signed in as {settings.email}
+        </p>
 
         <label className="mb-1 block text-xs font-bold text-neutral-500">Your name</label>
         <input
@@ -159,6 +181,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {error && <p className="mb-3 text-sm font-semibold text-rose-500">{error}</p>}
       <button
         onClick={save}
         disabled={saving}

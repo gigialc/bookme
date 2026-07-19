@@ -1,45 +1,34 @@
 import Link from "next/link";
-import { query, getSettings } from "@/lib/db";
+import { redirect } from "next/navigation";
+import { query } from "@/lib/db";
+import { getSessionUser } from "@/lib/auth";
 import { appUrl } from "@/lib/google";
 import CopyLink from "./CopyLink";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardHome() {
-  let accountCount = 0;
-  let eventTypeCount = 0;
-  let upcoming: { name: string; start_ts: string; event_name: string | null; event_emoji: string | null }[] = [];
-  let displayName = "there";
-  let dbOk = true;
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
 
-  try {
-    const settings = await getSettings();
-    displayName = settings.display_name;
-    accountCount = (await query("SELECT id FROM accounts")).length;
-    eventTypeCount = (await query("SELECT id FROM event_types WHERE active = TRUE")).length;
-    upcoming = await query(
-      `SELECT b.name, b.start_ts, e.name AS event_name, e.emoji AS event_emoji
-       FROM bookings b LEFT JOIN event_types e ON e.id = b.event_type_id
-       WHERE b.status = 'confirmed' AND b.start_ts > NOW()
-       ORDER BY b.start_ts ASC LIMIT 5`
-    );
-  } catch {
-    dbOk = false;
-  }
-
-  if (!dbOk) {
-    return (
-      <div className="max-w-lg rounded-3xl bg-white p-8 shadow">
-        <div className="mb-2 text-4xl">🛠️</div>
-        <h1 className="mb-2 text-xl font-bold">Database not connected</h1>
-        <p className="text-sm text-neutral-500">
-          Add <code className="rounded bg-neutral-100 px-1">DATABASE_URL</code> to your{" "}
-          <code className="rounded bg-neutral-100 px-1">.env.local</code> and restart the app. The
-          README walks you through it step by step 💪
-        </p>
-      </div>
-    );
-  }
+  const accountCount = (
+    await query("SELECT id FROM accounts WHERE user_id = $1", [user.id])
+  ).length;
+  const eventTypeCount = (
+    await query("SELECT id FROM event_types WHERE user_id = $1 AND active = TRUE", [user.id])
+  ).length;
+  const upcoming = await query<{
+    name: string;
+    start_ts: string;
+    event_name: string | null;
+    event_emoji: string | null;
+  }>(
+    `SELECT b.name, b.start_ts, e.name AS event_name, e.emoji AS event_emoji
+     FROM bookings b LEFT JOIN event_types e ON e.id = b.event_type_id
+     WHERE b.user_id = $1 AND b.status = 'confirmed' AND b.start_ts > NOW()
+     ORDER BY b.start_ts ASC LIMIT 5`,
+    [user.id]
+  );
 
   const steps = [
     { done: accountCount > 0, label: "Connect a Google calendar", href: "/dashboard/calendars", emoji: "📅" },
@@ -47,10 +36,11 @@ export default async function DashboardHome() {
     { done: true, label: "Set your weekly availability", href: "/dashboard/availability", emoji: "🕐" },
   ];
   const setupDone = steps.every((s) => s.done);
+  const bookingUrl = `${appUrl()}/${user.username}`;
 
   return (
     <div className="max-w-3xl">
-      <h1 className="mb-1 text-2xl font-bold">Hi {displayName}! 🌸</h1>
+      <h1 className="mb-1 text-2xl font-bold">Hi {user.display_name}! 🌸</h1>
       <p className="mb-8 text-neutral-500">Here&apos;s what&apos;s happening with your bookings.</p>
 
       {!setupDone && (
@@ -87,7 +77,10 @@ export default async function DashboardHome() {
 
       <div className="mb-8 rounded-3xl bg-white p-6 shadow">
         <h2 className="mb-2 font-bold">🔗 Your booking link</h2>
-        <CopyLink url={appUrl()} />
+        <CopyLink url={bookingUrl} />
+        <p className="mt-2 text-xs text-neutral-400">
+          Change your username on the <Link href="/dashboard/settings" className="underline">settings page</Link>.
+        </p>
       </div>
 
       <div className="rounded-3xl bg-white p-6 shadow">

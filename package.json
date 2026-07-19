@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@neondatabase/auth": "^0.4.2-beta",
     "googleapis": "^173.0.0",
     "luxon": "^3.7.2",
     "next": "16.2.10",

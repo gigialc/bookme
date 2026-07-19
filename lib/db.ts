@@ -23,8 +23,23 @@ function getPool(): Pool {
 }
 
 const SCHEMA = `
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  auth_id TEXT UNIQUE,
+  email TEXT UNIQUE NOT NULL,
+  username TEXT UNIQUE NOT NULL,
+  display_name TEXT NOT NULL,
+  welcome_message TEXT NOT NULL DEFAULT 'Pick a time that works for you — can''t wait to chat! ✨',
+  timezone TEXT NOT NULL DEFAULT 'America/New_York',
+  min_notice_hours INTEGER NOT NULL DEFAULT 4,
+  booking_window_days INTEGER NOT NULL DEFAULT 30,
+  theme TEXT NOT NULL DEFAULT 'rose',
+  slot_step_mins INTEGER NOT NULL DEFAULT 30,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 CREATE TABLE IF NOT EXISTS accounts (
   id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
   refresh_token TEXT NOT NULL,
   is_primary BOOLEAN NOT NULL DEFAULT FALSE,
@@ -33,7 +48,8 @@ CREATE TABLE IF NOT EXISTS accounts (
 );
 CREATE TABLE IF NOT EXISTS event_types (
   id SERIAL PRIMARY KEY,
-  slug TEXT UNIQUE NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  slug TEXT NOT NULL,
   name TEXT NOT NULL,
   emoji TEXT NOT NULL DEFAULT '💬',
   description TEXT NOT NULL DEFAULT '',
@@ -43,20 +59,19 @@ CREATE TABLE IF NOT EXISTS event_types (
   color TEXT NOT NULL DEFAULT 'rose',
   location TEXT NOT NULL DEFAULT 'Google Meet',
   active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, slug)
 );
 CREATE TABLE IF NOT EXISTS availability (
   id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   weekday INTEGER NOT NULL,
   start_time TEXT NOT NULL,
   end_time TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
 CREATE TABLE IF NOT EXISTS bookings (
   id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   event_type_id INTEGER REFERENCES event_types(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
   email TEXT NOT NULL,
@@ -91,7 +106,11 @@ export async function query<T = any>(text: string, params: any[] = []): Promise<
   return res.rows as T[];
 }
 
-export type Settings = {
+export type User = {
+  id: number;
+  auth_id: string | null;
+  email: string;
+  username: string;
   display_name: string;
   welcome_message: string;
   timezone: string;
@@ -101,43 +120,47 @@ export type Settings = {
   slot_step_mins: number;
 };
 
-export const DEFAULT_SETTINGS: Settings = {
-  display_name: "Georgina",
-  welcome_message: "Pick a time that works for you — can't wait to chat! ✨",
-  timezone: "America/New_York",
-  min_notice_hours: 4,
-  booking_window_days: 30,
-  theme: "rose",
-  slot_step_mins: 30,
-};
-
-export async function getSettings(): Promise<Settings> {
-  const rows = await query<{ key: string; value: string }>("SELECT key, value FROM settings");
-  const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
-  return {
-    display_name: map.display_name ?? DEFAULT_SETTINGS.display_name,
-    welcome_message: map.welcome_message ?? DEFAULT_SETTINGS.welcome_message,
-    timezone: map.timezone ?? DEFAULT_SETTINGS.timezone,
-    min_notice_hours: Number(map.min_notice_hours ?? DEFAULT_SETTINGS.min_notice_hours),
-    booking_window_days: Number(map.booking_window_days ?? DEFAULT_SETTINGS.booking_window_days),
-    theme: map.theme ?? DEFAULT_SETTINGS.theme,
-    slot_step_mins: Number(map.slot_step_mins ?? DEFAULT_SETTINGS.slot_step_mins),
-  };
+export async function getUserById(id: number): Promise<User | null> {
+  const [user] = await query<User>("SELECT * FROM users WHERE id = $1", [id]);
+  return user ?? null;
 }
 
-export async function saveSettings(partial: Partial<Settings>): Promise<void> {
-  for (const [key, value] of Object.entries(partial)) {
-    if (value === undefined) continue;
-    await query(
-      `INSERT INTO settings (key, value) VALUES ($1, $2)
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-      [key, String(value)]
-    );
+export async function getUserByUsername(username: string): Promise<User | null> {
+  const [user] = await query<User>("SELECT * FROM users WHERE username = $1", [
+    username.toLowerCase(),
+  ]);
+  return user ?? null;
+}
+
+export const RESERVED_USERNAMES = new Set([
+  "login", "logout", "dashboard", "api", "book", "admin", "settings", "u",
+  "www", "app", "about", "help", "terms", "privacy", "signup", "signin",
+]);
+
+export const USERNAME_RE = /^[a-z0-9](?:[a-z0-9-]{1,28}[a-z0-9])?$/;
+
+/** Derive a unique username from an email address. */
+export async function usernameFromEmail(email: string): Promise<string> {
+  let base = email
+    .split("@")[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+  if (base.length < 2) base = "user";
+  if (RESERVED_USERNAMES.has(base)) base = `${base}-1`;
+
+  let candidate = base;
+  for (let i = 2; ; i++) {
+    const clash = await query("SELECT id FROM users WHERE username = $1", [candidate]);
+    if (clash.length === 0) return candidate;
+    candidate = `${base}-${i}`;
   }
 }
 
 export type Account = {
   id: number;
+  user_id: number;
   email: string;
   refresh_token: string;
   is_primary: boolean;
@@ -146,6 +169,7 @@ export type Account = {
 
 export type EventType = {
   id: number;
+  user_id: number;
   slug: string;
   name: string;
   emoji: string;
@@ -160,6 +184,7 @@ export type EventType = {
 
 export type AvailabilityRule = {
   id: number;
+  user_id: number;
   weekday: number; // 0 = Monday ... 6 = Sunday (luxon weekday - 1)
   start_time: string; // "09:00"
   end_time: string; // "17:00"
@@ -167,6 +192,7 @@ export type AvailabilityRule = {
 
 export type Booking = {
   id: number;
+  user_id: number;
   event_type_id: number | null;
   name: string;
   email: string;

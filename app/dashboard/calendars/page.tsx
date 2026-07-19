@@ -60,7 +60,9 @@ function CalendarsInner() {
         <div className="mb-4 rounded-2xl bg-rose-100 px-4 py-3 text-sm font-semibold text-rose-600">
           {error === "norefresh"
             ? "Google didn't send a refresh token — try connecting again and make sure to approve access."
-            : "Hmm, connecting didn't work. Try again?"}
+            : error === "taken"
+              ? "That Google account is already connected to a different bookme profile 🙈"
+              : "Hmm, connecting didn't work. Try again?"}
         </div>
       )}
 
