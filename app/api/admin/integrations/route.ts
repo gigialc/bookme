@@ -10,7 +10,7 @@ export async function GET() {
   if (userId instanceof NextResponse) return userId;
   const user = await getUserById(userId);
   return NextResponse.json({
-    granola_connected: Boolean(user?.granola_api_key),
+    granola_connected: Boolean(user?.granola_access_token || user?.granola_api_key),
     claude_extraction: Boolean(process.env.ANTHROPIC_API_KEY),
   });
 }
@@ -22,7 +22,12 @@ export async function PUT(req: NextRequest) {
   const key = String(b.granola_api_key ?? "").trim();
 
   if (!key) {
-    await query("UPDATE users SET granola_api_key = NULL WHERE id = $1", [userId]);
+    // Disconnect entirely: clear both the OAuth tokens and any API key.
+    await query(
+      `UPDATE users SET granola_api_key = NULL, granola_access_token = NULL,
+       granola_refresh_token = NULL, granola_token_expires = NULL WHERE id = $1`,
+      [userId]
+    );
     return NextResponse.json({ granola_connected: false });
   }
 

@@ -58,6 +58,10 @@ export default function SettingsPage() {
       .then((r) => r.json())
       .then((d) => setGranolaConnected(Boolean(d.granola_connected)))
       .catch(() => {});
+    const g = new URLSearchParams(window.location.search).get("granola");
+    if (g === "connected") setGranolaMsg("Granola connected.");
+    else if (g === "denied") setGranolaMsg("You cancelled the Granola authorization.");
+    else if (g === "error") setGranolaMsg("Connecting to Granola didn't work — try again.");
   }, []);
 
   async function saveGranola(key: string) {
@@ -267,21 +271,34 @@ export default function SettingsPage() {
             </button>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            <input
-              type="password"
-              value={granolaKey}
-              onChange={(e) => setGranolaKey(e.target.value)}
-              placeholder="grn_… (Granola app → Settings → API keys)"
-              className="retro-input flex-1"
-            />
-            <button
-              onClick={() => saveGranola(granolaKey)}
-              disabled={granolaBusy || !granolaKey.trim()}
-              className="btn px-4 py-2 text-sm"
-            >
-              {granolaBusy ? "Checking…" : "Connect"}
-            </button>
+          <div>
+            <a href="/api/granola/connect" className="btn btn-primary px-5 py-2.5 text-sm">
+              Connect Granola
+            </a>
+            <p className="mt-2 text-xs text-ink/50">
+              One click — you&apos;ll approve access in your browser, no keys to copy.
+            </p>
+            <details className="mt-3">
+              <summary className="mono-label cursor-pointer text-ink/50">
+                use an api key instead
+              </summary>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <input
+                  type="password"
+                  value={granolaKey}
+                  onChange={(e) => setGranolaKey(e.target.value)}
+                  placeholder="grn_… (Granola app → Settings → API keys)"
+                  className="retro-input flex-1"
+                />
+                <button
+                  onClick={() => saveGranola(granolaKey)}
+                  disabled={granolaBusy || !granolaKey.trim()}
+                  className="btn px-4 py-2 text-sm"
+                >
+                  {granolaBusy ? "Checking…" : "Connect"}
+                </button>
+              </div>
+            </details>
           </div>
         )}
         {granolaMsg && <p className="mt-3 text-sm font-semibold">{granolaMsg}</p>}

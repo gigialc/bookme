@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { query, getUserById } from "@/lib/db";
 import { requireUser } from "@/lib/admin";
-import { listNotes, getNote } from "@/lib/granola";
+import { listNotes, getNote, GranolaNote } from "@/lib/granola";
+import { getGranolaAccessToken } from "@/lib/granola-oauth";
+import { fetchGranolaNotesViaMcp } from "@/lib/granola-mcp";
 import { extractActionItems } from "@/lib/extract";
 
 export const dynamic = "force-dynamic";
@@ -12,20 +14,31 @@ export async function POST() {
   if (userId instanceof NextResponse) return userId;
 
   const user = await getUserById(userId);
-  if (!user?.granola_api_key) {
+  if (!user || (!user.granola_access_token && !user.granola_api_key)) {
     return NextResponse.json({ error: "Connect Granola in Settings first" }, { status: 400 });
   }
 
   const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-  let notes;
+  let notes: GranolaNote[];
   try {
-    notes = await listNotes(user.granola_api_key, since);
+    const oauthToken = await getGranolaAccessToken(user);
+    if (oauthToken) {
+      notes = await fetchGranolaNotesViaMcp(oauthToken, since.toISOString());
+    } else if (user.granola_api_key) {
+      notes = await listNotes(user.granola_api_key, since);
+    } else {
+      return NextResponse.json(
+        { error: "Your Granola connection expired — reconnect it in Settings" },
+        { status: 400 }
+      );
+    }
   } catch (err) {
-    const invalid = err instanceof Error && err.message === "invalid_key";
+    const msg = err instanceof Error ? err.message : "";
+    const invalid = msg === "invalid_key" || msg === "granola_unauthorized";
     return NextResponse.json(
       {
         error: invalid
-          ? "Your Granola key stopped working — reconnect it in Settings"
+          ? "Your Granola connection stopped working — reconnect it in Settings"
           : "Couldn't reach Granola — try again in a moment",
       },
       { status: invalid ? 400 : 502 }
@@ -43,7 +56,11 @@ export async function POST() {
   let created = 0;
   const processedNotes: string[] = [];
   for (const stub of fresh) {
-    const note = stub.summary ? stub : await getNote(user.granola_api_key, stub.id);
+    const note = stub.summary
+      ? stub
+      : user.granola_api_key
+        ? await getNote(user.granola_api_key, stub.id)
+        : null;
     if (!note?.summary) continue;
     const title = note.title || "Untitled meeting";
     const items = await extractActionItems(title, note.summary);

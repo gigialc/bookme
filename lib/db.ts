@@ -40,6 +40,13 @@ CREATE TABLE IF NOT EXISTS users (
 );
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS granola_api_key TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS granola_access_token TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS granola_refresh_token TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS granola_token_expires TIMESTAMPTZ;
+CREATE TABLE IF NOT EXISTS app_config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS todos (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -134,6 +141,9 @@ export type User = {
   slot_step_mins: number;
   avatar_url: string | null;
   granola_api_key: string | null;
+  granola_access_token: string | null;
+  granola_refresh_token: string | null;
+  granola_token_expires: string | null;
 };
 
 export type Todo = {

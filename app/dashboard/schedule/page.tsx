@@ -34,7 +34,6 @@ const ACCOUNT_COLORS = ["#e03a3e", "#009ddc", "#61bb46", "#963d97", "#f5821f", "
 
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 22;
-const HOUR_PX = 44;
 
 const RESPONSE_ICON: Record<string, string> = {
   accepted: "✓",
@@ -63,7 +62,10 @@ type Positioned = {
 };
 
 /** Greedy lane assignment so overlapping events sit side by side. */
-function layoutDay(events: { event: CalendarEvent; start: DateTime; end: DateTime }[]): Positioned[] {
+function layoutDay(
+  events: { event: CalendarEvent; start: DateTime; end: DateTime }[],
+  hourPx: number
+): Positioned[] {
   const sorted = [...events].sort((a, b) => a.start.toMillis() - b.start.toMillis());
   const laneEnds: DateTime[] = [];
   const placed: (Positioned & { start: DateTime; end: DateTime })[] = [];
@@ -78,8 +80,8 @@ function layoutDay(events: { event: CalendarEvent; start: DateTime; end: DateTim
     }
     const startH = e.start.hour + e.start.minute / 60;
     const endH = e.end.hour + e.end.minute / 60;
-    const top = (Math.max(startH, DAY_START_HOUR) - DAY_START_HOUR) * HOUR_PX;
-    const bottom = (Math.min(endH === 0 ? 24 : endH, DAY_END_HOUR) - DAY_START_HOUR) * HOUR_PX;
+    const top = (Math.max(startH, DAY_START_HOUR) - DAY_START_HOUR) * hourPx;
+    const bottom = (Math.min(endH === 0 ? 24 : endH, DAY_END_HOUR) - DAY_START_HOUR) * hourPx;
     placed.push({
       event: e.event,
       start: e.start,
@@ -106,6 +108,18 @@ export default function SchedulePage() {
   const [accounts, setAccounts] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
+  const [hourPx, setHourPx] = useState(40);
+
+  // Scale hour rows so the whole week fits in the viewport without scrolling.
+  useEffect(() => {
+    const compute = () => {
+      const available = window.innerHeight - 320;
+      setHourPx(Math.max(20, Math.min(48, available / (DAY_END_HOUR - DAY_START_HOUR))));
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, []);
 
   // Week starts once we know the timezone from settings.
   useEffect(() => {
@@ -182,14 +196,14 @@ export default function SchedulePage() {
         });
       }
     }
-    return { timed: layoutDay(timed), allDay };
+    return { timed: layoutDay(timed, hourPx), allDay };
   }
 
   if (!weekStart) return <p className="text-sm text-ink/50">Loading…</p>;
 
   return (
     <div className="max-w-6xl">
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="mb-1 text-2xl font-bold tracking-tight">Schedule</h1>
           <p className="text-sm text-ink/60">
@@ -224,7 +238,7 @@ export default function SchedulePage() {
       </div>
 
       {accounts.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-4">
+        <div className="mb-3 flex flex-wrap items-center gap-4">
           {accounts.map((a) => (
             <span key={a} className="mono-label flex items-center gap-1.5 text-ink/70">
               <span
@@ -293,12 +307,12 @@ export default function SchedulePage() {
 
             {/* Time grid */}
             <div className="grid" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
-              <div className="relative" style={{ height: hours.length * HOUR_PX }}>
+              <div className="relative" style={{ height: hours.length * hourPx }}>
                 {hours.map((h) => (
                   <span
                     key={h}
                     className="mono-label absolute right-2 -translate-y-1/2 text-ink/40"
-                    style={{ top: (h - DAY_START_HOUR) * HOUR_PX }}
+                    style={{ top: (h - DAY_START_HOUR) * hourPx }}
                   >
                     {DateTime.fromObject({ hour: h }).toFormat("h a")}
                   </span>
@@ -309,21 +323,21 @@ export default function SchedulePage() {
                 const dayData = events ? eventsForDay(d) : { timed: [] as Positioned[] };
                 const isToday = d.hasSame(today, "day");
                 const now = DateTime.now().setZone(tz ?? "local");
-                const nowTop = (now.hour + now.minute / 60 - DAY_START_HOUR) * HOUR_PX;
+                const nowTop = (now.hour + now.minute / 60 - DAY_START_HOUR) * hourPx;
                 return (
                   <div
                     key={d.toISO()}
                     className={`relative border-l border-ink/15 ${isToday ? "bg-paper" : ""}`}
-                    style={{ height: hours.length * HOUR_PX }}
+                    style={{ height: hours.length * hourPx }}
                   >
                     {hours.map((h) => (
                       <div
                         key={h}
                         className="absolute w-full border-t border-ink/10"
-                        style={{ top: (h - DAY_START_HOUR) * HOUR_PX }}
+                        style={{ top: (h - DAY_START_HOUR) * hourPx }}
                       />
                     ))}
-                    {isToday && nowTop >= 0 && nowTop <= hours.length * HOUR_PX && (
+                    {isToday && nowTop >= 0 && nowTop <= hours.length * hourPx && (
                       <div
                         className="absolute z-10 w-full border-t-2 border-red-500"
                         style={{ top: nowTop }}
@@ -365,7 +379,7 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      <p className="mono-label mt-3 text-ink/40">
+      <p className="mono-label mt-2 text-ink/40">
         times shown in {(tz ?? "local").replace(/_/g, " ")} · showing {DAY_START_HOUR}:00–{DAY_END_HOUR}:00
       </p>
 
