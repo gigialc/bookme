@@ -123,6 +123,7 @@ export default function SchedulePage() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
+  const [calPickerOpen, setCalPickerOpen] = useState(false);
   const hourPx = HOUR_PX;
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -257,6 +258,79 @@ export default function SchedulePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {calendars.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setCalPickerOpen((o) => !o)}
+                className="btn-plain flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold"
+              >
+                <CalendarIcon className="h-3.5 w-3.5" />
+                Calendars
+                {hidden.size > 0 && (
+                  <span className="rounded-sm border border-ink bg-ink px-1 text-[10px] font-bold text-paper">
+                    {calendars.length - hidden.size}/{calendars.length}
+                  </span>
+                )}
+              </button>
+              {calPickerOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setCalPickerOpen(false)} />
+                  <div className="animate-pop card absolute left-0 z-50 mt-2 w-72 overflow-hidden bg-paper">
+                    <div className="titlebar">
+                      <button
+                        className="titlebar-box transition hover:bg-ink"
+                        onClick={() => setCalPickerOpen(false)}
+                        aria-label="Close"
+                      />
+                      <span className="titlebar-label">my calendars</span>
+                    </div>
+                    <div className="max-h-80 space-y-4 overflow-y-auto p-4">
+                      {accounts.map((a) => {
+                        const accountCals = calendars.filter((c) => c.accountEmail === a);
+                        if (accountCals.length === 0) return null;
+                        return (
+                          <div key={a}>
+                            <p className="mono-label mb-1.5 truncate text-ink/50">{a}</p>
+                            <div className="space-y-1.5">
+                              {accountCals.map((c) => {
+                                const key = calKey(c.accountEmail, c.id);
+                                const checked = !hidden.has(key);
+                                return (
+                                  <label
+                                    key={key}
+                                    className="flex cursor-pointer select-none items-center gap-2 text-xs font-semibold"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className="sr-only"
+                                      checked={checked}
+                                      onChange={() => toggleCalendar(key)}
+                                    />
+                                    <span
+                                      aria-hidden
+                                      className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm border border-ink text-[9px] font-bold text-paper"
+                                      style={{ background: checked ? colorFor(a) : "transparent" }}
+                                    >
+                                      {checked ? "✓" : ""}
+                                    </span>
+                                    <span
+                                      className={`truncate ${checked ? "text-ink/80" : "text-ink/40"}`}
+                                    >
+                                      {c.name}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           <button
             onClick={() => setWeekStart(weekStart.minus({ weeks: 1 }))}
             className="btn-plain p-2"
@@ -284,52 +358,16 @@ export default function SchedulePage() {
       </div>
 
       {accounts.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-start gap-x-8 gap-y-3">
-          {accounts.map((a) => {
-            const accountCals = calendars.filter((c) => c.accountEmail === a);
-            return (
-              <div key={a}>
-                <p className="mono-label mb-1.5 flex items-center gap-1.5 text-ink/70">
-                  <span
-                    className="inline-block h-3 w-3 rounded-sm border border-ink"
-                    style={{ background: colorFor(a) }}
-                  />
-                  {a}
-                </p>
-                {accountCals.length > 0 && (
-                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 pl-[18px]">
-                    {accountCals.map((c) => {
-                      const key = calKey(c.accountEmail, c.id);
-                      const checked = !hidden.has(key);
-                      return (
-                        <label
-                          key={key}
-                          className="flex cursor-pointer select-none items-center gap-1.5 text-xs font-semibold"
-                        >
-                          <input
-                            type="checkbox"
-                            className="sr-only"
-                            checked={checked}
-                            onChange={() => toggleCalendar(key)}
-                          />
-                          <span
-                            aria-hidden
-                            className="flex h-3.5 w-3.5 items-center justify-center rounded-sm border border-ink text-[9px] font-bold text-paper"
-                            style={{ background: checked ? colorFor(a) : "transparent" }}
-                          >
-                            {checked ? "✓" : ""}
-                          </span>
-                          <span className={checked ? "text-ink/80" : "text-ink/40"}>
-                            {c.name}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="mb-3 flex flex-wrap items-center gap-4">
+          {accounts.map((a) => (
+            <span key={a} className="mono-label flex items-center gap-1.5 text-ink/70">
+              <span
+                className="inline-block h-3 w-3 rounded-sm border border-ink"
+                style={{ background: colorFor(a) }}
+              />
+              {a}
+            </span>
+          ))}
         </div>
       )}
 
