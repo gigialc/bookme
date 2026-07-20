@@ -110,7 +110,7 @@ export default function BookingsPage() {
 
       {bookings !== null && (
         <>
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/50">
+          <h2 className="mb-3 text-xs font-semibold tracking-wide text-ink/50">
             Upcoming
           </h2>
           {upcoming.length === 0 ? (
@@ -127,7 +127,7 @@ export default function BookingsPage() {
 
           {past.length > 0 && (
             <>
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink/50">
+              <h2 className="mb-3 text-xs font-semibold tracking-wide text-ink/50">
                 Past &amp; cancelled
               </h2>
               <div className="space-y-3">

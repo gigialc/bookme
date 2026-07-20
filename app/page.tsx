@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import { CalendarIcon, GlobeIcon, VideoIcon, ClockIcon } from "@/components/icons";
+import { CalendarIcon, GlobeIcon, VideoIcon, ClockIcon, CheckIcon } from "@/components/icons";
 
 const FEATURES = [
   {
@@ -25,6 +25,79 @@ const FEATURES = [
   },
 ];
 
+const STEPS = [
+  { n: "1", title: "Sign in with Google", text: "Your account is ready in one click." },
+  { n: "2", title: "Connect your calendars", text: "Add every Gmail you use — work, personal, side projects." },
+  { n: "3", title: "Share your link", text: "Guests pick a truly free time. Invites land on both calendars." },
+];
+
+const MOCK_DAYS = [
+  "", "", "1", "2", "3", "4", "5",
+  "6", "7", "8", "9", "10", "11", "12",
+  "13", "14", "15", "16", "17", "18", "19",
+  "20", "21", "22", "23", "24", "25", "26",
+];
+const MOCK_ENABLED = new Set(["7", "9", "14", "16", "21", "23"]);
+
+function BookingMockup() {
+  return (
+    <div className="card w-full max-w-sm overflow-hidden bg-paper" aria-hidden="true">
+      <div className="titlebar">
+        <span className="titlebar-box" />
+        <span className="titlebar-label">book a time</span>
+      </div>
+      <div className="p-5">
+        <div className="mb-4 flex items-center gap-3 border-b-2 border-ink pb-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-ink bg-rose-50 text-xl">
+            ☕
+          </div>
+          <div>
+            <p className="text-sm font-bold">Coffee chat</p>
+            <p className="mono-label text-ink/50">30 min · google meet</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+            <div key={i} className="mono-label py-1 text-center text-ink/40">
+              {d}
+            </div>
+          ))}
+          {MOCK_DAYS.map((d, i) => (
+            <div
+              key={i}
+              className={`flex aspect-square items-center justify-center rounded-md text-xs font-semibold ${
+                d === "16"
+                  ? "border-2 border-ink bg-rose-500 text-white"
+                  : MOCK_ENABLED.has(d)
+                    ? "border-2 border-ink bg-rose-50 text-rose-600"
+                    : "text-ink/30"
+              }`}
+            >
+              {d}
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-1.5">
+          {["9:00", "9:30", "11:00"].map((t) => (
+            <div
+              key={t}
+              className={`rounded-lg border-2 py-1.5 text-center text-xs font-bold ${
+                t === "9:30" ? "border-ink bg-ink text-paper" : "border-ink/25 text-rose-600"
+              }`}
+            >
+              {t}
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center gap-2 rounded-lg border-2 border-ink bg-emerald-100 px-3 py-2">
+          <CheckIcon className="h-3.5 w-3.5 text-emerald-800" />
+          <span className="text-xs font-bold text-emerald-800">Booked — invite sent to both calendars</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col bg-cream">
@@ -38,32 +111,58 @@ export default function Home() {
         </Link>
       </header>
 
-      <section className="mx-auto w-full max-w-5xl px-6 pb-16 pt-14 text-center sm:pt-20">
-        <p
-          className="mb-2 text-5xl text-ink sm:text-6xl"
-          style={{ fontFamily: "var(--font-caveat), cursive" }}
-        >
-          hello.
-        </p>
-        <h1 className="mx-auto mb-5 max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
-          One link. Every calendar. Zero double-bookings.
-        </h1>
-        <p className="mx-auto mb-9 max-w-xl text-lg leading-relaxed text-ink/70">
-          Share your booking page. Guests pick a time that&apos;s genuinely free across all your
-          Google accounts — and the invite lands on both calendars with a Meet link attached.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <Link href="/login" className="btn btn-primary px-7 py-3 text-sm">
-            Get your booking link
-          </Link>
-          <Link href="/login" className="btn px-7 py-3 text-sm">
-            Sign in
-          </Link>
+      <section className="mx-auto w-full max-w-5xl px-6 pb-20 pt-10 sm:pt-16">
+        <div className="grid items-center gap-12 sm:grid-cols-2">
+          <div>
+            <p
+              className="mb-2 text-5xl text-ink"
+              style={{ fontFamily: "var(--font-caveat), cursive" }}
+            >
+              hello.
+            </p>
+            <h1 className="mb-5 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
+              One link.
+              <br />
+              Every calendar.
+              <br />
+              Zero double-bookings.
+            </h1>
+            <p className="mb-8 max-w-md text-lg leading-relaxed text-ink/70">
+              Share your booking page. Guests pick a time that&apos;s genuinely free across all
+              your Google accounts — invite and Meet link included.
+            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              <Link href="/login" className="btn btn-primary px-7 py-3 text-sm">
+                Get your booking link
+              </Link>
+              <p className="mono-label text-ink/50">free · sign in with google</p>
+            </div>
+          </div>
+          <div className="flex justify-center sm:justify-end">
+            <div className="rotate-1 transition hover:rotate-0">
+              <BookingMockup />
+            </div>
+          </div>
         </div>
-        <p className="mono-label mt-5 text-ink/50">free · sign in with google</p>
       </section>
 
-      <section className="mx-auto w-full max-w-5xl px-6 pb-24">
+      <section className="border-y-2 border-ink bg-paper">
+        <div className="mx-auto grid w-full max-w-5xl gap-8 px-6 py-12 sm:grid-cols-3">
+          {STEPS.map((s) => (
+            <div key={s.n} className="flex gap-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-cream font-mono text-sm font-bold">
+                {s.n}
+              </div>
+              <div>
+                <h2 className="mb-1 font-bold">{s.title}</h2>
+                <p className="text-sm leading-relaxed text-ink/60">{s.text}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-5xl px-6 py-20">
         <div className="card overflow-hidden">
           <div className="titlebar">
             <span className="titlebar-box" />
@@ -85,6 +184,18 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="mt-16 text-center">
+          <p
+            className="mb-3 text-4xl"
+            style={{ fontFamily: "var(--font-caveat), cursive" }}
+          >
+            ready when you are
+          </p>
+          <Link href="/login" className="btn btn-primary px-8 py-3 text-sm">
+            Create your page — it&apos;s free
+          </Link>
         </div>
       </section>
 

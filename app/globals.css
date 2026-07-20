@@ -69,7 +69,7 @@ body {
 }
 .btn-plain:hover { background: #efe9d9; }
 
-/* System-1 style pinstriped title bar */
+/* clean retro title bar */
 .titlebar {
   position: relative;
   display: flex;
@@ -77,23 +77,13 @@ body {
   gap: 0.6rem;
   border-bottom: 2px solid var(--color-ink);
   border-radius: 10px 10px 0 0;
-  padding: 0.5rem 0.9rem;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--color-paper) 0px,
-    var(--color-paper) 3px,
-    var(--color-ink) 3px,
-    var(--color-ink) 4px
-  );
-  background-clip: padding-box;
+  padding: 0.55rem 0.9rem;
+  background: var(--color-cream);
 }
 .titlebar-label {
-  background: var(--color-paper);
-  padding: 0 0.6rem;
   font-family: var(--font-space-mono), monospace;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
-  text-transform: uppercase;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -133,8 +123,7 @@ body {
   font-family: var(--font-space-mono), monospace;
   font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .retro-input {
