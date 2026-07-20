@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DateTime, Interval } from "luxon";
 import {
   ChevronLeftIcon,
@@ -32,8 +32,9 @@ type CalendarEvent = {
 // the classic six colors, in stripe order
 const ACCOUNT_COLORS = ["#e03a3e", "#009ddc", "#61bb46", "#963d97", "#f5821f", "#fdb827"];
 
-const DAY_START_HOUR = 7;
-const DAY_END_HOUR = 22;
+const DAY_START_HOUR = 0;
+const DAY_END_HOUR = 24;
+const HOUR_PX = 48;
 
 const RESPONSE_ICON: Record<string, string> = {
   accepted: "✓",
@@ -108,18 +109,19 @@ export default function SchedulePage() {
   const [accounts, setAccounts] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
-  const [hourPx, setHourPx] = useState(40);
+  const hourPx = HOUR_PX;
+  const gridRef = useRef<HTMLDivElement>(null);
 
-  // Scale hour rows so the whole week fits in the viewport without scrolling.
+  // Start the scroll position at a useful hour (near "now" for the current
+  // week, 7am otherwise) — like Google Calendar.
   useEffect(() => {
-    const compute = () => {
-      const available = window.innerHeight - 320;
-      setHourPx(Math.max(20, Math.min(48, available / (DAY_END_HOUR - DAY_START_HOUR))));
-    };
-    compute();
-    window.addEventListener("resize", compute);
-    return () => window.removeEventListener("resize", compute);
-  }, []);
+    if (!gridRef.current || !weekStart) return;
+    const now = DateTime.now().setZone(tz ?? "local");
+    const inThisWeek = now >= weekStart && now < weekStart.plus({ days: 7 });
+    const targetHour = inThisWeek ? Math.max(now.hour - 2, 0) : 7;
+    gridRef.current.scrollTop = targetHour * HOUR_PX;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart === null, tz]);
 
   // Week starts once we know the timezone from settings.
   useEffect(() => {
@@ -305,7 +307,12 @@ export default function SchedulePage() {
               })}
             </div>
 
-            {/* Time grid */}
+            {/* Time grid — scrolls vertically through the full 24 hours */}
+            <div
+              ref={gridRef}
+              className="overflow-y-auto overscroll-contain"
+              style={{ maxHeight: "calc(100vh - 350px)", minHeight: 280 }}
+            >
             <div className="grid" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
               <div className="relative" style={{ height: hours.length * hourPx }}>
                 {hours.map((h) => (
@@ -375,12 +382,13 @@ export default function SchedulePage() {
                 );
               })}
             </div>
+            </div>
           </div>
         </div>
       </div>
 
       <p className="mono-label mt-2 text-ink/40">
-        times shown in {(tz ?? "local").replace(/_/g, " ")} · showing {DAY_START_HOUR}:00–{DAY_END_HOUR}:00
+        times shown in {(tz ?? "local").replace(/_/g, " ")} · full day, scroll for more
       </p>
 
       {/* Event detail window */}
