@@ -151,6 +151,7 @@ export type CalendarEvent = {
   endIso: string;
   allDay: boolean;
   accountEmail: string;
+  calendarId: string;
   calendarName: string;
   meetLink: string | null;
   location: string | null;
@@ -160,12 +161,19 @@ export type CalendarEvent = {
   attendees: { email: string; name: string | null; response: string | null }[];
 };
 
+export type CalendarInfo = {
+  id: string;
+  name: string;
+  accountEmail: string;
+  primary: boolean;
+};
+
 /** Fetch actual events (with titles) across every calendar of one account. */
 export async function eventsForAccount(
   account: Account,
   timeMinIso: string,
   timeMaxIso: string
-): Promise<CalendarEvent[]> {
+): Promise<{ events: CalendarEvent[]; calendars: CalendarInfo[] }> {
   const auth = authedClient(account.refresh_token);
   const calendar = google.calendar({ version: "v3", auth });
 
@@ -187,11 +195,19 @@ export async function eventsForAccount(
     )
   );
 
+  const calendars: CalendarInfo[] = cals.map((c) => ({
+    id: c.id ?? "",
+    name: c.summaryOverride ?? c.summary ?? "Calendar",
+    accountEmail: account.email,
+    primary: c.primary === true,
+  }));
+
   const events: CalendarEvent[] = [];
   for (let ci = 0; ci < results.length; ci++) {
     const r = results[ci];
     if (r.status !== "fulfilled") continue;
     const calName = cals[ci]?.summaryOverride ?? cals[ci]?.summary ?? "Calendar";
+    const calId = cals[ci]?.id ?? "";
     for (const e of r.value.data.items ?? []) {
       if (e.status === "cancelled") continue;
       const start = e.start?.dateTime ?? e.start?.date;
@@ -206,6 +222,7 @@ export async function eventsForAccount(
         endIso: end,
         allDay: !e.start?.dateTime,
         accountEmail: account.email,
+        calendarId: calId,
         calendarName: calName,
         meetLink: e.hangoutLink ?? null,
         location: e.location ?? null,
@@ -223,7 +240,7 @@ export async function eventsForAccount(
       });
     }
   }
-  return events;
+  return { events, calendars };
 }
 
 /** Merge events across all of a user's connected accounts, deduped. */
@@ -231,7 +248,7 @@ export async function allCalendarEvents(
   userId: number,
   timeMinIso: string,
   timeMaxIso: string
-): Promise<{ events: CalendarEvent[]; accounts: string[] }> {
+): Promise<{ events: CalendarEvent[]; accounts: string[]; calendars: CalendarInfo[] }> {
   const accounts = await query<Account>(
     "SELECT * FROM accounts WHERE user_id = $1 ORDER BY id ASC",
     [userId]
@@ -241,9 +258,11 @@ export async function allCalendarEvents(
   );
   const seen = new Set<string>();
   const events: CalendarEvent[] = [];
+  const calendars: CalendarInfo[] = [];
   for (const r of results) {
     if (r.status !== "fulfilled") continue;
-    for (const e of r.value) {
+    calendars.push(...r.value.calendars);
+    for (const e of r.value.events) {
       const key = `${e.id}|${e.startIso}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -251,5 +270,5 @@ export async function allCalendarEvents(
     }
   }
   events.sort((a, b) => a.startIso.localeCompare(b.startIso));
-  return { events, accounts: accounts.map((a) => a.email) };
+  return { events, accounts: accounts.map((a) => a.email), calendars };
 }

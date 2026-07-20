@@ -18,10 +18,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "range too large" }, { status: 400 });
   }
 
-  const { events, accounts } = await allCalendarEvents(
+  const { events, accounts, calendars } = await allCalendarEvents(
     userId,
     start.toUTC().toISO()!,
     end.toUTC().toISO()!
   );
-  return NextResponse.json({ events, accounts });
+  return NextResponse.json({ events, accounts, calendars });
 }

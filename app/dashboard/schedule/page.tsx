@@ -20,6 +20,7 @@ type CalendarEvent = {
   endIso: string;
   allDay: boolean;
   accountEmail: string;
+  calendarId: string;
   calendarName: string;
   meetLink: string | null;
   location: string | null;
@@ -29,8 +30,19 @@ type CalendarEvent = {
   attendees: { email: string; name: string | null; response: string | null }[];
 };
 
+type CalendarInfo = {
+  id: string;
+  name: string;
+  accountEmail: string;
+  primary: boolean;
+};
+
 // the classic six colors, in stripe order
 const ACCOUNT_COLORS = ["#e03a3e", "#009ddc", "#61bb46", "#963d97", "#f5821f", "#fdb827"];
+
+const HIDDEN_CALENDARS_KEY = "bookme:hidden-calendars";
+
+const calKey = (accountEmail: string, calendarId: string) => `${accountEmail}|${calendarId}`;
 
 const DAY_START_HOUR = 0;
 const DAY_END_HOUR = 24;
@@ -107,6 +119,8 @@ export default function SchedulePage() {
   const [weekStart, setWeekStart] = useState<DateTime | null>(null);
   const [events, setEvents] = useState<CalendarEvent[] | null>(null);
   const [accounts, setAccounts] = useState<string[]>([]);
+  const [calendars, setCalendars] = useState<CalendarInfo[]>([]);
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
   const hourPx = HOUR_PX;
@@ -122,6 +136,30 @@ export default function SchedulePage() {
     gridRef.current.scrollTop = targetHour * HOUR_PX;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart === null, tz]);
+
+  // Restore which calendars were unchecked last time.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HIDDEN_CALENDARS_KEY);
+      if (raw) setHidden(new Set(JSON.parse(raw)));
+    } catch {
+      // ignore bad stored data
+    }
+  }, []);
+
+  const toggleCalendar = (key: string) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try {
+        localStorage.setItem(HIDDEN_CALENDARS_KEY, JSON.stringify([...next]));
+      } catch {
+        // storage unavailable — selection still applies this session
+      }
+      return next;
+    });
+  };
 
   // Week starts once we know the timezone from settings.
   useEffect(() => {
@@ -157,6 +195,7 @@ export default function SchedulePage() {
       const data = await res.json();
       setEvents(data.events ?? []);
       setAccounts(data.accounts ?? []);
+      setCalendars(data.calendars ?? []);
     } catch {
       setEvents([]);
       setError("Couldn't load your calendars — try refreshing.");
@@ -169,6 +208,11 @@ export default function SchedulePage() {
 
   const colorFor = (email: string) =>
     ACCOUNT_COLORS[Math.max(0, accounts.indexOf(email)) % ACCOUNT_COLORS.length];
+
+  const visibleEvents = useMemo(
+    () => (events ?? []).filter((e) => !hidden.has(calKey(e.accountEmail, e.calendarId))),
+    [events, hidden]
+  );
 
   const hours = Array.from(
     { length: DAY_END_HOUR - DAY_START_HOUR },
@@ -184,7 +228,7 @@ export default function SchedulePage() {
     const dayInt = Interval.fromDateTimes(day, day.plus({ days: 1 }));
     const timed: { event: CalendarEvent; start: DateTime; end: DateTime }[] = [];
     const allDay: CalendarEvent[] = [];
-    for (const e of events ?? []) {
+    for (const e of visibleEvents) {
       const start = inTz(e.startIso);
       const end = inTz(e.endIso);
       if (!Interval.fromDateTimes(start, end).overlaps(dayInt)) continue;
@@ -240,16 +284,52 @@ export default function SchedulePage() {
       </div>
 
       {accounts.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-4">
-          {accounts.map((a) => (
-            <span key={a} className="mono-label flex items-center gap-1.5 text-ink/70">
-              <span
-                className="inline-block h-3 w-3 rounded-sm border border-ink"
-                style={{ background: colorFor(a) }}
-              />
-              {a}
-            </span>
-          ))}
+        <div className="mb-3 flex flex-wrap items-start gap-x-8 gap-y-3">
+          {accounts.map((a) => {
+            const accountCals = calendars.filter((c) => c.accountEmail === a);
+            return (
+              <div key={a}>
+                <p className="mono-label mb-1.5 flex items-center gap-1.5 text-ink/70">
+                  <span
+                    className="inline-block h-3 w-3 rounded-sm border border-ink"
+                    style={{ background: colorFor(a) }}
+                  />
+                  {a}
+                </p>
+                {accountCals.length > 0 && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 pl-[18px]">
+                    {accountCals.map((c) => {
+                      const key = calKey(c.accountEmail, c.id);
+                      const checked = !hidden.has(key);
+                      return (
+                        <label
+                          key={key}
+                          className="flex cursor-pointer select-none items-center gap-1.5 text-xs font-semibold"
+                        >
+                          <input
+                            type="checkbox"
+                            className="sr-only"
+                            checked={checked}
+                            onChange={() => toggleCalendar(key)}
+                          />
+                          <span
+                            aria-hidden
+                            className="flex h-3.5 w-3.5 items-center justify-center rounded-sm border border-ink text-[9px] font-bold text-paper"
+                            style={{ background: checked ? colorFor(a) : "transparent" }}
+                          >
+                            {checked ? "✓" : ""}
+                          </span>
+                          <span className={checked ? "text-ink/80" : "text-ink/40"}>
+                            {c.name}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -263,7 +343,11 @@ export default function SchedulePage() {
         <div className="titlebar">
           <span className="titlebar-box" />
           <span className="titlebar-label">
-            {events === null ? "loading…" : `${events.length} events this week`}
+            {events === null
+              ? "loading…"
+              : visibleEvents.length === events.length
+                ? `${events.length} events this week`
+                : `${visibleEvents.length} of ${events.length} events this week`}
           </span>
         </div>
 
