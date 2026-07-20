@@ -101,14 +101,16 @@ function BookingMockup() {
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col bg-cream">
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-3">
-          <Logo size={30} />
-          <span className="text-xl font-bold tracking-tight">bookme</span>
+      <header className="sticky top-0 z-50 border-b-2 border-ink bg-cream/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-3">
+            <Logo size={30} />
+            <span className="text-xl font-bold tracking-tight">bookme</span>
+          </div>
+          <Link href="/login" className="btn px-4 py-1.5 text-sm">
+            Sign in
+          </Link>
         </div>
-        <Link href="/login" className="btn px-4 py-1.5 text-sm">
-          Sign in
-        </Link>
       </header>
 
       <section className="mx-auto w-full max-w-5xl px-6 pb-20 pt-10 sm:pt-16">
