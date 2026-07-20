@@ -25,12 +25,6 @@ const FEATURES = [
   },
 ];
 
-const STEPS = [
-  { n: "1", title: "Sign in with Google", text: "Your account is ready in one click." },
-  { n: "2", title: "Connect your calendars", text: "Add every Gmail you use — work, personal, side projects." },
-  { n: "3", title: "Share your link", text: "Guests pick a truly free time. Invites land on both calendars." },
-];
-
 const MOCK_DAYS = [
   "", "", "1", "2", "3", "4", "5",
   "6", "7", "8", "9", "10", "11", "12",
@@ -148,23 +142,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-y-2 border-ink bg-paper">
-        <div className="mx-auto grid w-full max-w-5xl gap-8 px-6 py-12 sm:grid-cols-3">
-          {STEPS.map((s) => (
-            <div key={s.n} className="flex gap-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ink bg-cream font-mono text-sm font-bold">
-                {s.n}
-              </div>
-              <div>
-                <h2 className="mb-1 font-bold">{s.title}</h2>
-                <p className="text-sm leading-relaxed text-ink/60">{s.text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-5xl px-6 py-20">
+      <section className="mx-auto w-full max-w-5xl px-6 py-16">
         <p
           className="mb-10 text-center text-4xl"
           style={{ fontFamily: "var(--font-caveat), cursive" }}
