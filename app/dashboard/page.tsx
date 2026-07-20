@@ -4,6 +4,7 @@ import { query } from "@/lib/db";
 import { getSessionUser } from "@/lib/auth";
 import { appUrl } from "@/lib/google";
 import CopyLink from "./CopyLink";
+import TodayAgenda from "./TodayAgenda";
 import { CheckIcon, ArrowRightIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,8 @@ export default async function DashboardHome() {
           </div>
         </div>
       )}
+
+      {accountCount > 0 && <TodayAgenda />}
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
         <div className="card p-6">

@@ -338,8 +338,13 @@ export default function BookingClient({
             )}
 
             {selectedDate && loadingSlots && (
-              <div className="flex h-full min-h-44 items-center justify-center">
-                <span className="mono-label animate-pulse text-ink/50">finding times…</span>
+              <div className="animate-fade-up">
+                <div className="skeleton mb-3 h-5 w-40" />
+                <div className="grid grid-cols-2 gap-2">
+                  {Array.from({ length: 8 }, (_, i) => (
+                    <div key={i} className="skeleton h-10" />
+                  ))}
+                </div>
               </div>
             )}
 

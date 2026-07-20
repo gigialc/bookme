@@ -333,7 +333,7 @@ export default function SchedulePage() {
                 return (
                   <div
                     key={d.toISO()}
-                    className={`relative border-l border-ink/15 ${isToday ? "bg-paper" : ""}`}
+                    className={`relative border-l border-ink/15 ${isToday ? "bg-paper" : d.weekday >= 6 ? "bg-ink/[0.03]" : ""}`}
                     style={{ height: hours.length * hourPx }}
                   >
                     {hours.map((h) => (

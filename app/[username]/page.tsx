@@ -6,6 +6,26 @@ import { ClockIcon, MapPinIcon, ArrowRightIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}) {
+  try {
+    const { username } = await params;
+    const user = await getUserByUsername(username);
+    if (!user) return { title: "bookme" };
+    const title = `Book time with ${user.display_name}`;
+    return {
+      title: `${title} — bookme`,
+      description: user.welcome_message,
+      openGraph: { title, description: user.welcome_message },
+    };
+  } catch {
+    return { title: "bookme" };
+  }
+}
+
 export default async function ProfilePage({
   params,
 }: {

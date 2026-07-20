@@ -6,6 +6,32 @@ import BookingClient from "./BookingClient";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string; slug: string }>;
+}) {
+  try {
+    const { username, slug } = await params;
+    const user = await getUserByUsername(username);
+    if (!user) return { title: "bookme" };
+    const [et] = await query<EventType>(
+      "SELECT name, duration_mins FROM event_types WHERE user_id = $1 AND slug = $2",
+      [user.id, slug]
+    );
+    const title = et
+      ? `${et.name} with ${user.display_name} (${et.duration_mins} min)`
+      : `Book time with ${user.display_name}`;
+    return {
+      title: `${title} — bookme`,
+      description: user.welcome_message,
+      openGraph: { title, description: user.welcome_message },
+    };
+  } catch {
+    return { title: "bookme" };
+  }
+}
+
 export default async function BookPage({
   params,
 }: {
