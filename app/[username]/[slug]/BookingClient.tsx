@@ -207,8 +207,13 @@ export default function BookingClient({
 
   function dayEnabled(d: DateTime) {
     if (d < today || d > maxDay) return false;
-    // Approximate with the owner-timezone weekday; the slots API is the source of truth.
-    return availableWeekdays.includes(d.setZone(ownerTimezone).weekday - 1);
+    // A visitor's calendar day can span two owner-timezone weekdays, so check
+    // both ends of the day; the slots API remains the source of truth.
+    const startWeekday = d.setZone(ownerTimezone).weekday - 1;
+    const endWeekday = d.plus({ days: 1 }).minus({ minutes: 1 }).setZone(ownerTimezone).weekday - 1;
+    return (
+      availableWeekdays.includes(startWeekday) || availableWeekdays.includes(endWeekday)
+    );
   }
 
   const canGoPrev = monthCursor > today.startOf("month");
