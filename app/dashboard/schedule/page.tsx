@@ -267,11 +267,15 @@ export default function SchedulePage() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div
+          ref={gridRef}
+          className="overflow-auto overscroll-contain"
+          style={{ maxHeight: "calc(100vh - 300px)", minHeight: 320 }}
+        >
           <div className="min-w-[860px]">
             {/* Day headers + all-day row */}
-            <div className="grid border-b-2 border-ink" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
-              <div />
+            <div className="sticky top-0 z-30 grid border-b-2 border-ink bg-paper" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
+              <div className="sticky left-0 z-40 bg-paper" />
               {days.map((d) => {
                 const dayData = events ? eventsForDay(d) : { allDay: [] as CalendarEvent[] };
                 return (
@@ -307,14 +311,9 @@ export default function SchedulePage() {
               })}
             </div>
 
-            {/* Time grid — scrolls vertically through the full 24 hours */}
-            <div
-              ref={gridRef}
-              className="overflow-y-auto overscroll-contain"
-              style={{ maxHeight: "calc(100vh - 350px)", minHeight: 280 }}
-            >
+            {/* Time grid — full 24 hours */}
             <div className="grid" style={{ gridTemplateColumns: "56px repeat(7, 1fr)" }}>
-              <div className="relative" style={{ height: hours.length * hourPx }}>
+              <div className="sticky left-0 z-20 bg-paper" style={{ height: hours.length * hourPx }}>
                 {hours.map((h) => (
                   <span
                     key={h}
@@ -381,7 +380,6 @@ export default function SchedulePage() {
                   </div>
                 );
               })}
-            </div>
             </div>
           </div>
         </div>
