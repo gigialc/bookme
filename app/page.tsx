@@ -163,27 +163,24 @@ export default function Home() {
       </section>
 
       <section className="mx-auto w-full max-w-5xl px-6 py-20">
-        <div className="card overflow-hidden">
-          <div className="titlebar">
-            <span className="titlebar-box" />
-            <span className="titlebar-label">what&apos;s inside</span>
-          </div>
-          <div className="grid sm:grid-cols-2">
-            {FEATURES.map((f, i) => (
-              <div
-                key={f.title}
-                className={`p-8 ${i % 2 === 0 ? "sm:border-r-2 sm:border-ink" : ""} ${
-                  i < 2 ? "border-b-2 border-ink" : ""
-                }`}
-              >
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg border-2 border-ink bg-cream">
-                  <f.icon className="h-4.5 w-4.5" />
-                </div>
-                <h2 className="mb-1.5 font-bold">{f.title}</h2>
+        <p
+          className="mb-10 text-center text-4xl"
+          style={{ fontFamily: "var(--font-caveat), cursive" }}
+        >
+          what&apos;s inside
+        </p>
+        <div className="grid gap-x-12 gap-y-10 sm:grid-cols-2">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="flex gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-ink bg-paper shadow-[3px_3px_0_#1a1a1a]">
+                <f.icon className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="mb-1 font-bold">{f.title}</h2>
                 <p className="text-sm leading-relaxed text-ink/60">{f.text}</p>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
 
         <div className="mt-16 text-center">
