@@ -19,6 +19,7 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   title: "bookme — one link, every calendar",
   description: "A booking page that respects every calendar you have.",
 };
