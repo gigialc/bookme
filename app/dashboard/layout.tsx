@@ -42,7 +42,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex flex-1 flex-col bg-cream sm:flex-row">
-      <aside className="flex shrink-0 flex-row items-center gap-1 overflow-x-auto border-b-2 border-ink bg-cream p-3 sm:sticky sm:top-0 sm:h-screen sm:w-60 sm:flex-col sm:items-stretch sm:overflow-y-auto sm:border-b-0 sm:border-r-2 sm:p-4">
+      <aside className="flex shrink-0 flex-row items-center gap-1 overflow-x-auto border-b-2 border-ink bg-cream p-3 sm:fixed sm:inset-y-0 sm:left-0 sm:z-40 sm:w-60 sm:flex-col sm:items-stretch sm:overflow-y-auto sm:border-b-0 sm:border-r-2 sm:p-4">
         <Link
           href="/dashboard"
           className="mb-0 hidden items-center gap-2.5 px-3 py-2 sm:mb-4 sm:flex"
@@ -64,7 +64,7 @@ export default async function DashboardLayout({
           <LogoutButton />
         </div>
       </aside>
-      <main className="flex-1 p-4 sm:p-10">{children}</main>
+      <main className="flex-1 p-4 sm:ml-60 sm:p-10">{children}</main>
     </div>
   );
 }
