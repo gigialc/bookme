@@ -138,6 +138,52 @@ export async function createBookingEvent(opts: {
   };
 }
 
+/** Create an event on any writable calendar of a connected account (Schedule quick-add). */
+export async function createScheduleEvent(opts: {
+  account: Account;
+  calendarId: string;
+  summary: string;
+  startIso: string;
+  endIso: string;
+  timezone: string;
+  location?: string;
+  description?: string;
+  attendees?: string[];
+  withMeet?: boolean;
+}): Promise<{ eventId: string; htmlLink: string | null }> {
+  const auth = authedClient(opts.account.refresh_token);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const res = await calendar.events.insert({
+    calendarId: opts.calendarId,
+    conferenceDataVersion: opts.withMeet ? 1 : 0,
+    sendUpdates: opts.attendees?.length ? "all" : "none",
+    requestBody: {
+      summary: opts.summary,
+      start: { dateTime: opts.startIso, timeZone: opts.timezone },
+      end: { dateTime: opts.endIso, timeZone: opts.timezone },
+      ...(opts.location ? { location: opts.location } : {}),
+      ...(opts.description ? { description: opts.description } : {}),
+      ...(opts.attendees?.length
+        ? { attendees: opts.attendees.map((email) => ({ email })) }
+        : {}),
+      reminders: { useDefault: true },
+      ...(opts.withMeet
+        ? {
+            conferenceData: {
+              createRequest: {
+                requestId: `bookme-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                conferenceSolutionKey: { type: "hangoutsMeet" },
+              },
+            },
+          }
+        : {}),
+    },
+  });
+
+  return { eventId: res.data.id ?? "", htmlLink: res.data.htmlLink ?? null };
+}
+
 export async function cancelBookingEvent(account: Account, eventId: string): Promise<void> {
   const auth = authedClient(account.refresh_token);
   const calendar = google.calendar({ version: "v3", auth });
@@ -166,6 +212,7 @@ export type CalendarInfo = {
   name: string;
   accountEmail: string;
   primary: boolean;
+  accessRole: string;
 };
 
 /** Fetch actual events (with titles) across every calendar of one account. */
@@ -200,6 +247,7 @@ export async function eventsForAccount(
     name: c.summaryOverride ?? c.summary ?? "Calendar",
     accountEmail: account.email,
     primary: c.primary === true,
+    accessRole: c.accessRole ?? "reader",
   }));
 
   const events: CalendarEvent[] = [];

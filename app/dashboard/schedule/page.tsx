@@ -35,7 +35,23 @@ type CalendarInfo = {
   name: string;
   accountEmail: string;
   primary: boolean;
+  accessRole: string;
 };
+
+/** A drag-selected slice of a day, in fractional hours (e.g. 17.5 = 5:30pm). */
+type TimeSelection = { day: DateTime; startH: number; endH: number };
+
+/** 5:30pm-style label from fractional hours. */
+const fmtH = (h: number) =>
+  DateTime.fromObject({ hour: Math.floor(h) % 24, minute: Math.round((h % 1) * 60) }).toFormat(
+    "h:mm a"
+  );
+
+/** "HH:mm" for <input type="time"> from fractional hours. */
+const toTimeInput = (h: number) =>
+  h >= 24
+    ? "23:59"
+    : `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
 
 // the classic six colors, in stripe order
 const ACCOUNT_COLORS = ["#e03a3e", "#009ddc", "#61bb46", "#963d97", "#f5821f", "#fdb827"];
@@ -46,7 +62,7 @@ const calKey = (accountEmail: string, calendarId: string) => `${accountEmail}|${
 
 const DAY_START_HOUR = 0;
 const DAY_END_HOUR = 24;
-const HOUR_PX = 48;
+const HOUR_PX = 60;
 
 const RESPONSE_ICON: Record<string, string> = {
   accepted: "✓",
@@ -124,6 +140,11 @@ export default function SchedulePage() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
   const [calPickerOpen, setCalPickerOpen] = useState(false);
+  const [drag, setDrag] = useState<TimeSelection | null>(null);
+  const [draft, setDraft] = useState<TimeSelection | null>(null);
+  const dragInfo = useRef<{ day: DateTime; anchor: number; rectTop: number } | null>(null);
+  const dragVal = useRef<TimeSelection | null>(null);
+  dragVal.current = drag;
   const hourPx = HOUR_PX;
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -161,6 +182,44 @@ export default function SchedulePage() {
       return next;
     });
   };
+
+  // Drag-to-create: press on empty grid space, drag to size the event
+  // (snapped to 30 minutes), release to open the quick-create window.
+  const beginDrag = (day: DateTime, e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button")) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const h = Math.min(23.5, Math.max(0, Math.floor(((e.clientY - rect.top) / hourPx) * 2) / 2));
+    dragInfo.current = { day, anchor: h, rectTop: rect.top };
+    setDraft(null);
+    setDrag({ day, startH: h, endH: h + 0.5 });
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    if (!drag) return;
+    const move = (e: MouseEvent) => {
+      const d = dragInfo.current;
+      if (!d) return;
+      const snapped = Math.min(24, Math.max(0, Math.round(((e.clientY - d.rectTop) / hourPx) * 2) / 2));
+      setDrag(
+        snapped > d.anchor
+          ? { day: d.day, startH: d.anchor, endH: snapped }
+          : { day: d.day, startH: snapped, endH: d.anchor + 0.5 }
+      );
+    };
+    const up = () => {
+      if (dragVal.current) setDraft(dragVal.current);
+      setDrag(null);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drag !== null, hourPx]);
 
   // Week starts once we know the timezone from settings.
   useEffect(() => {
@@ -249,7 +308,7 @@ export default function SchedulePage() {
   if (!weekStart) return <p className="text-sm text-ink/50">Loading…</p>;
 
   return (
-    <div className="max-w-6xl">
+    <div>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="mb-1 text-2xl font-bold tracking-tight">Schedule</h1>
@@ -392,7 +451,7 @@ export default function SchedulePage() {
         <div
           ref={gridRef}
           className="overflow-auto overscroll-contain"
-          style={{ maxHeight: "calc(100vh - 300px)", minHeight: 320 }}
+          style={{ maxHeight: "calc(100vh - 230px)", minHeight: 480 }}
         >
           <div className="min-w-[860px]">
             {/* Day headers + all-day row */}
@@ -455,7 +514,8 @@ export default function SchedulePage() {
                 return (
                   <div
                     key={d.toISO()}
-                    className={`relative border-l border-ink/15 ${isToday ? "bg-paper" : d.weekday >= 6 ? "bg-ink/[0.03]" : ""}`}
+                    onMouseDown={(e) => beginDrag(d, e)}
+                    className={`relative cursor-crosshair border-l border-ink/15 ${isToday ? "bg-paper" : d.weekday >= 6 ? "bg-ink/[0.03]" : ""}`}
                     style={{ height: hours.length * hourPx }}
                   >
                     {hours.map((h) => (
@@ -499,6 +559,24 @@ export default function SchedulePage() {
                         </button>
                       );
                     })}
+                    {(() => {
+                      const sel = drag ?? draft;
+                      if (!sel || !sel.day.hasSame(d, "day")) return null;
+                      const selHeight = Math.max((sel.endH - sel.startH) * hourPx, 14);
+                      return (
+                        <div
+                          className="pointer-events-none absolute z-20 w-[calc(100%-3px)] overflow-hidden rounded-md border-2 border-ink bg-ink/85 px-1.5 py-0.5 text-paper shadow-[2px_2px_0_#1a1a1a]"
+                          style={{ top: sel.startH * hourPx, height: selHeight }}
+                        >
+                          <p className="truncate text-[11px] font-bold leading-tight">(No title)</p>
+                          {selHeight > 34 && (
+                            <p className="truncate text-[10px] opacity-70">
+                              {fmtH(sel.startH)} – {fmtH(sel.endH)}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -620,6 +698,240 @@ export default function SchedulePage() {
           </div>
         </div>
       )}
+
+      {/* Quick-create window (Google Calendar style) */}
+      {draft && (
+        <QuickCreate
+          draft={draft}
+          tz={tz ?? "local"}
+          calendars={calendars}
+          colorFor={colorFor}
+          onClose={() => setDraft(null)}
+          onCreated={() => {
+            setDraft(null);
+            load();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function QuickCreate({
+  draft,
+  tz,
+  calendars,
+  colorFor,
+  onClose,
+  onCreated,
+}: {
+  draft: TimeSelection;
+  tz: string;
+  calendars: CalendarInfo[];
+  colorFor: (email: string) => string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const writable = calendars.filter((c) => c.accessRole === "owner" || c.accessRole === "writer");
+  const writableAccounts = [...new Set(writable.map((c) => c.accountEmail))];
+  const defaultCal = writable.find((c) => c.primary) ?? writable[0];
+  const [calSel, setCalSel] = useState(
+    defaultCal ? calKey(defaultCal.accountEmail, defaultCal.id) : ""
+  );
+  const [title, setTitle] = useState("");
+  const [startTime, setStartTime] = useState(toTimeInput(draft.startH));
+  const [endTime, setEndTime] = useState(toTimeInput(draft.endH));
+  const [guests, setGuests] = useState("");
+  const [withMeet, setWithMeet] = useState(false);
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const selCal = writable.find((c) => calKey(c.accountEmail, c.id) === calSel);
+
+  async function save() {
+    if (!selCal) {
+      setError("Pick a calendar first.");
+      return;
+    }
+    const [sh, sm] = startTime.split(":").map(Number);
+    const [eh, em] = endTime.split(":").map(Number);
+    const start = draft.day.set({ hour: sh, minute: sm });
+    const end = draft.day.set({ hour: eh, minute: em });
+    if (!start.isValid || !end.isValid || end <= start) {
+      setError("End time must be after start time.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountEmail: selCal.accountEmail,
+          calendarId: selCal.id,
+          title,
+          startIso: start.toISO(),
+          endIso: end.toISO(),
+          timezone: tz === "local" ? DateTime.local().zoneName : tz,
+          location,
+          description,
+          guests: guests
+            .split(/[,;\s]+/)
+            .map((g) => g.trim())
+            .filter(Boolean),
+          withMeet,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.error || "save failed");
+      }
+      onCreated();
+    } catch (e) {
+      setError(
+        e instanceof Error && e.message && e.message !== "save failed"
+          ? e.message
+          : "Couldn't save the event — try again."
+      );
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="animate-pop card w-full max-w-md overflow-hidden bg-paper"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="titlebar">
+          <button
+            className="titlebar-box transition hover:bg-ink"
+            onClick={onClose}
+            aria-label="Close"
+          />
+          <span className="titlebar-label">new event</span>
+        </div>
+        <div className="max-h-[75vh] overflow-y-auto p-6">
+          <input
+            autoFocus
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") save();
+            }}
+            placeholder="Add title"
+            className="mb-5 w-full border-b-2 border-ink bg-transparent pb-1.5 text-xl font-bold outline-none placeholder:text-ink/30"
+          />
+          <div className="space-y-3.5 text-sm">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <ClockIcon className="h-4 w-4 shrink-0 text-ink/50" />
+              <span className="font-semibold">{draft.day.toFormat("cccc, LLLL d")}</span>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="retro-input !w-auto !px-2 !py-1 text-xs font-semibold"
+              />
+              <span className="text-ink/50">–</span>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="retro-input !w-auto !px-2 !py-1 text-xs font-semibold"
+              />
+            </div>
+            <div className="flex items-center gap-2.5">
+              <CalendarIcon className="h-4 w-4 shrink-0 text-ink/50" />
+              {writable.length > 0 ? (
+                <>
+                  <select
+                    value={calSel}
+                    onChange={(e) => setCalSel(e.target.value)}
+                    className="retro-input !w-auto max-w-[280px] !px-2 !py-1 text-xs font-semibold"
+                  >
+                    {writableAccounts.map((a) => (
+                      <optgroup key={a} label={a}>
+                        {writable
+                          .filter((c) => c.accountEmail === a)
+                          .map((c) => (
+                            <option
+                              key={calKey(c.accountEmail, c.id)}
+                              value={calKey(c.accountEmail, c.id)}
+                            >
+                              {c.name}
+                            </option>
+                          ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  {selCal && (
+                    <span
+                      className="inline-block h-3 w-3 shrink-0 rounded-sm border border-ink"
+                      style={{ background: colorFor(selCal.accountEmail) }}
+                    />
+                  )}
+                </>
+              ) : (
+                <span className="text-xs text-ink/50">No writable calendars connected.</span>
+              )}
+            </div>
+            <label className="flex cursor-pointer items-center gap-2.5">
+              <VideoIcon className="h-4 w-4 shrink-0 text-ink/50" />
+              <input
+                type="checkbox"
+                checked={withMeet}
+                onChange={(e) => setWithMeet(e.target.checked)}
+                className="h-4 w-4 accent-ink"
+              />
+              <span className="text-xs font-semibold">Add Google Meet video conferencing</span>
+            </label>
+            <div className="flex items-center gap-2.5">
+              <UsersIcon className="h-4 w-4 shrink-0 text-ink/50" />
+              <input
+                value={guests}
+                onChange={(e) => setGuests(e.target.value)}
+                placeholder="Add guests (emails, comma-separated)"
+                className="retro-input !py-1.5 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-2.5">
+              <MapPinIcon className="h-4 w-4 shrink-0 text-ink/50" />
+              <input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Add location"
+                className="retro-input !py-1.5 text-xs"
+              />
+            </div>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder="Add description"
+              className="retro-input text-xs"
+            />
+          </div>
+          {error && <p className="mt-3 text-xs font-bold text-rose-600">{error}</p>}
+          <div className="mt-5 flex justify-end gap-2">
+            <button onClick={onClose} className="btn-plain px-4 py-2 text-xs font-bold">
+              Cancel
+            </button>
+            <button
+              onClick={save}
+              disabled={saving || writable.length === 0}
+              className="btn btn-primary px-5 py-2 text-xs disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
