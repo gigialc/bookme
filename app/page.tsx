@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import { CalendarIcon, GlobeIcon, VideoIcon, ClockIcon, CheckIcon } from "@/components/icons";
+import { CalendarIcon, GlobeIcon, VideoIcon, ClockIcon, CheckIcon, GitHubIcon } from "@/components/icons";
+
+const GITHUB_URL = "https://github.com/gigialc/bookme";
 
 const FEATURES = [
   {
@@ -101,9 +103,20 @@ export default function Home() {
             <Logo size={30} />
             <span className="text-xl font-bold tracking-tight">bookme</span>
           </div>
-          <Link href="/login" className="btn px-4 py-1.5 text-sm">
-            Sign in
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="View the source on GitHub"
+              className="btn p-2"
+            >
+              <GitHubIcon className="h-4 w-4" />
+            </a>
+            <Link href="/login" className="btn px-4 py-1.5 text-sm">
+              Sign in
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -178,7 +191,18 @@ export default function Home() {
 
       <footer className="border-t-2 border-ink">
         <div className="rainbow-h h-1.5" />
-        <p className="mono-label py-6 text-center text-ink/50">bookme</p>
+        <div className="flex items-center justify-center gap-5 py-6">
+          <p className="mono-label text-ink/50">bookme</p>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mono-label flex items-center gap-1.5 text-ink/50 transition hover:text-ink"
+          >
+            <GitHubIcon className="h-3.5 w-3.5" />
+            github
+          </a>
+        </div>
       </footer>
     </main>
   );
