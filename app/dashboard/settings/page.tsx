@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { THEMES } from "@/lib/themes";
+import TimezoneSelect from "@/components/TimezoneSelect";
 
 type Settings = {
   email: string;
@@ -15,25 +16,6 @@ type Settings = {
   theme: string;
   slot_step_mins: number;
 };
-
-const COMMON_TIMEZONES = [
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "America/Mexico_City",
-  "America/Bogota",
-  "America/Sao_Paulo",
-  "Europe/London",
-  "Europe/Paris",
-  "Europe/Madrid",
-  "Europe/Berlin",
-  "Asia/Dubai",
-  "Asia/Kolkata",
-  "Asia/Singapore",
-  "Asia/Tokyo",
-  "Australia/Sydney",
-];
 
 const inputCls =
   "retro-input";
@@ -105,10 +87,6 @@ export default function SettingsPage() {
   }
 
   if (!settings) return <p className="text-sm text-ink/50">Loading…</p>;
-
-  const tzList = COMMON_TIMEZONES.includes(settings.timezone)
-    ? COMMON_TIMEZONES
-    : [settings.timezone, ...COMMON_TIMEZONES];
 
   return (
     <div className="max-w-2xl">
@@ -194,17 +172,11 @@ export default function SettingsPage() {
         <h2 className="mb-5 text-sm font-bold">Scheduling</h2>
 
         <label className={labelCls}>Timezone</label>
-        <select
+        <TimezoneSelect
           value={settings.timezone}
-          onChange={(e) => setSettings({ ...settings, timezone: e.target.value })}
+          onChange={(tz) => setSettings({ ...settings, timezone: tz })}
           className={`mb-5 ${inputCls}`}
-        >
-          {tzList.map((tz) => (
-            <option key={tz} value={tz}>
-              {tz.replace(/_/g, " ")}
-            </option>
-          ))}
-        </select>
+        />
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div>

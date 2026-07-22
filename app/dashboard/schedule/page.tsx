@@ -12,6 +12,7 @@ import {
   VideoIcon,
   CalendarIcon,
 } from "@/components/icons";
+import TimezoneSelect from "@/components/TimezoneSelect";
 
 type CalendarEvent = {
   id: string;
@@ -243,6 +244,17 @@ export default function SchedulePage() {
   );
   const today = tz ? DateTime.now().setZone(tz).startOf("day") : DateTime.now().startOf("day");
 
+  // Same user setting as the Settings page — saving here shows up there too.
+  const changeTz = (zone: string) => {
+    setTz(zone);
+    setWeekStart((ws) => (ws ? ws.setZone(zone, { keepLocalTime: true }) : ws));
+    fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ timezone: zone }),
+    }).catch(() => {});
+  };
+
   const load = useCallback(async () => {
     if (!weekStart) return;
     setEvents(null);
@@ -316,7 +328,8 @@ export default function SchedulePage() {
             Every event from all your connected accounts, in one place.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
           {calendars.length > 0 && (
             <div className="relative">
               <button
@@ -413,6 +426,14 @@ export default function SchedulePage() {
           <span className="ml-2 font-bold">
             {weekStart.toFormat("LLL d")} – {weekStart.plus({ days: 6 }).toFormat("LLL d, yyyy")}
           </span>
+          </div>
+          {tz && tz !== "local" && (
+            <TimezoneSelect
+              value={tz}
+              onChange={changeTz}
+              className="retro-input !w-auto !px-2 !py-1 text-xs font-semibold"
+            />
+          )}
         </div>
       </div>
 
