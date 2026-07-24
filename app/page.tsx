@@ -1,8 +1,17 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import { CalendarIcon, GlobeIcon, VideoIcon, ClockIcon, CheckIcon, GitHubIcon } from "@/components/icons";
+import {
+  CalendarIcon,
+  GlobeIcon,
+  VideoIcon,
+  ClockIcon,
+  CheckIcon,
+  GitHubIcon,
+} from "@/components/icons";
 
 const GITHUB_URL = "https://github.com/gigialc/bookme";
+const DESKTOP_DOWNLOAD_URL =
+  "https://github.com/gigialc/bookme/releases/latest/download/BookMe-Desktop-macOS.dmg";
 
 const FEATURES = [
   {
@@ -28,16 +37,43 @@ const FEATURES = [
 ];
 
 const MOCK_DAYS = [
-  "", "", "1", "2", "3", "4", "5",
-  "6", "7", "8", "9", "10", "11", "12",
-  "13", "14", "15", "16", "17", "18", "19",
-  "20", "21", "22", "23", "24", "25", "26",
+  "",
+  "",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "20",
+  "21",
+  "22",
+  "23",
+  "24",
+  "25",
+  "26",
 ];
 const MOCK_ENABLED = new Set(["7", "9", "14", "16", "21", "23"]);
 
 function BookingMockup() {
   return (
-    <div className="card w-full max-w-sm overflow-hidden bg-paper" aria-hidden="true">
+    <div
+      className="card w-full max-w-sm overflow-hidden bg-paper"
+      aria-hidden="true"
+    >
       <div className="titlebar">
         <span className="titlebar-box" />
         <span className="titlebar-label">book a time</span>
@@ -78,7 +114,9 @@ function BookingMockup() {
             <div
               key={t}
               className={`rounded-lg border-2 py-1.5 text-center text-xs font-bold ${
-                t === "9:30" ? "border-ink bg-ink text-paper" : "border-ink/25 text-rose-600"
+                t === "9:30"
+                  ? "border-ink bg-ink text-paper"
+                  : "border-ink/25 text-rose-600"
               }`}
             >
               {t}
@@ -87,7 +125,9 @@ function BookingMockup() {
         </div>
         <div className="mt-4 flex items-center gap-2 rounded-lg border-2 border-ink bg-emerald-100 px-3 py-2">
           <CheckIcon className="h-3.5 w-3.5 text-emerald-800" />
-          <span className="text-xs font-bold text-emerald-800">Booked — invite sent to both calendars</span>
+          <span className="text-xs font-bold text-emerald-800">
+            Booked — invite sent to both calendars
+          </span>
         </div>
       </div>
     </div>
@@ -104,6 +144,12 @@ export default function Home() {
             <span className="text-xl font-bold tracking-tight">bookme</span>
           </div>
           <div className="flex items-center gap-2.5">
+            <a
+              href={DESKTOP_DOWNLOAD_URL}
+              className="btn hidden px-4 py-1.5 text-sm sm:inline-flex"
+            >
+              ↓ Desktop app
+            </a>
             <a
               href={GITHUB_URL}
               target="_blank"
@@ -137,14 +183,21 @@ export default function Home() {
               Zero double-bookings.
             </h1>
             <p className="mb-8 max-w-md text-lg leading-relaxed text-ink/70">
-              Share your booking page. Guests pick a time that&apos;s genuinely free across all
-              your Google accounts — invite and Meet link included.
+              Share your booking page. Guests pick a time that&apos;s genuinely
+              free across all your Google accounts — invite and Meet link
+              included.
             </p>
             <div className="flex flex-wrap items-center gap-4">
               <Link href="/login" className="btn btn-primary px-7 py-3 text-sm">
                 Get your booking link
               </Link>
-              <p className="mono-label text-ink/50">free · sign in with google</p>
+              <a href={DESKTOP_DOWNLOAD_URL} className="btn px-7 py-3 text-sm">
+                ↓ Download for Mac
+              </a>
+              <p className="w-full mono-label text-ink/50">
+                free · sign in with google · desktop notes use your recall api
+                key
+              </p>
             </div>
           </div>
           <div className="flex justify-center sm:justify-end">
@@ -186,6 +239,29 @@ export default function Home() {
           <Link href="/login" className="btn btn-primary px-8 py-3 text-sm">
             Create your page — it&apos;s free
           </Link>
+        </div>
+      </section>
+
+      <section className="border-y-2 border-ink bg-paper">
+        <div className="mx-auto grid w-full max-w-5xl items-center gap-8 px-6 py-14 sm:grid-cols-[1fr_auto]">
+          <div>
+            <p className="mono-label mb-2 text-rose-600">BookMe Desktop</p>
+            <h2 className="mb-2 text-2xl font-bold">
+              Your calls, transcribed beside your schedule.
+            </h2>
+            <p className="max-w-2xl text-sm leading-relaxed text-ink/60">
+              Download the macOS app, create or sign in to your BookMe account,
+              then add your own Recall API key under Meeting Notes → recorder
+              settings. BookMe detects supported meeting windows, and only
+              records after you choose Record &amp; take notes.
+            </p>
+          </div>
+          <a
+            href={DESKTOP_DOWNLOAD_URL}
+            className="btn btn-primary px-7 py-3 text-sm"
+          >
+            ↓ Download .dmg
+          </a>
         </div>
       </section>
 

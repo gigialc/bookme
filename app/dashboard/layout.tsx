@@ -12,6 +12,7 @@ import {
   SettingsIcon,
   MailIcon,
   CheckIcon,
+  NotesIcon,
 } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export const dynamic = "force-dynamic";
 const NAV = [
   { href: "/dashboard", label: "Overview", icon: HomeIcon },
   { href: "/dashboard/schedule", label: "Schedule", icon: CalendarIcon },
+  { href: "/dashboard/notes", label: "Meeting Notes", icon: NotesIcon },
   { href: "/dashboard/todos", label: "To-dos", icon: CheckIcon },
   { href: "/dashboard/event-types", label: "Event types", icon: TagIcon },
   { href: "/dashboard/availability", label: "Availability", icon: ClockIcon },

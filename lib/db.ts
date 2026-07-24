@@ -105,6 +105,17 @@ CREATE TABLE IF NOT EXISTS bookings (
   status TEXT NOT NULL DEFAULT 'confirmed',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS desktop_auth_codes (
+  code_hash TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  state TEXT NOT NULL,
+  verifier_challenge TEXT NOT NULL,
+  auth_cookies JSONB NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS desktop_auth_codes_expiry_idx
+  ON desktop_auth_codes (expires_at);
 `;
 
 async function ensureSchema(): Promise<void> {

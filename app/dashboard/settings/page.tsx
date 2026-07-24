@@ -17,8 +17,7 @@ type Settings = {
   slot_step_mins: number;
 };
 
-const inputCls =
-  "retro-input";
+const inputCls = "retro-input";
 const labelCls = "mono-label mb-1.5 block text-ink/60";
 const cardCls = "mb-6 card p-6";
 
@@ -31,8 +30,10 @@ export default function SettingsPage() {
   const [granolaKey, setGranolaKey] = useState("");
   const [granolaMsg, setGranolaMsg] = useState("");
   const [granolaBusy, setGranolaBusy] = useState(false);
+  const [bookmeNotesDesktop, setBookmeNotesDesktop] = useState(false);
 
   useEffect(() => {
+    setBookmeNotesDesktop(navigator.userAgent.includes("Electron"));
     fetch("/api/admin/settings")
       .then((r) => r.json())
       .then((d) => setSettings(d.settings));
@@ -42,8 +43,10 @@ export default function SettingsPage() {
       .catch(() => {});
     const g = new URLSearchParams(window.location.search).get("granola");
     if (g === "connected") setGranolaMsg("Granola connected.");
-    else if (g === "denied") setGranolaMsg("You cancelled the Granola authorization.");
-    else if (g === "error") setGranolaMsg("Connecting to Granola didn't work — try again.");
+    else if (g === "denied")
+      setGranolaMsg("You cancelled the Granola authorization.");
+    else if (g === "error")
+      setGranolaMsg("Connecting to Granola didn't work — try again.");
   }, []);
 
   async function saveGranola(key: string) {
@@ -58,7 +61,9 @@ export default function SettingsPage() {
     if (res.ok) {
       setGranolaConnected(Boolean(d.granola_connected));
       setGranolaKey("");
-      setGranolaMsg(d.granola_connected ? "Granola connected." : "Granola disconnected.");
+      setGranolaMsg(
+        d.granola_connected ? "Granola connected." : "Granola disconnected.",
+      );
     } else {
       setGranolaMsg(d.error || "Couldn't save the key — try again.");
     }
@@ -120,26 +125,36 @@ export default function SettingsPage() {
           <span className="text-sm text-ink/50">/</span>
           <input
             value={settings.username}
-            onChange={(e) => setSettings({ ...settings, username: e.target.value.toLowerCase() })}
+            onChange={(e) =>
+              setSettings({
+                ...settings,
+                username: e.target.value.toLowerCase(),
+              })
+            }
             className={inputCls}
           />
         </div>
         <p className="mb-5 text-xs text-ink/50">
-          Your booking link: {typeof window !== "undefined" ? window.location.origin : ""}/
+          Your booking link:{" "}
+          {typeof window !== "undefined" ? window.location.origin : ""}/
           {settings.username} · signed in as {settings.email}
         </p>
 
         <label className={labelCls}>Display name</label>
         <input
           value={settings.display_name}
-          onChange={(e) => setSettings({ ...settings, display_name: e.target.value })}
+          onChange={(e) =>
+            setSettings({ ...settings, display_name: e.target.value })
+          }
           className={`mb-5 ${inputCls}`}
         />
 
         <label className={labelCls}>Welcome message</label>
         <textarea
           value={settings.welcome_message}
-          onChange={(e) => setSettings({ ...settings, welcome_message: e.target.value })}
+          onChange={(e) =>
+            setSettings({ ...settings, welcome_message: e.target.value })
+          }
           rows={2}
           className={inputCls}
         />
@@ -186,11 +201,16 @@ export default function SettingsPage() {
               min={0}
               value={settings.min_notice_hours}
               onChange={(e) =>
-                setSettings({ ...settings, min_notice_hours: Number(e.target.value) })
+                setSettings({
+                  ...settings,
+                  min_notice_hours: Number(e.target.value),
+                })
               }
               className={inputCls}
             />
-            <p className="mt-1.5 text-xs text-ink/50">How soon someone can book</p>
+            <p className="mt-1.5 text-xs text-ink/50">
+              How soon someone can book
+            </p>
           </div>
           <div>
             <label className={labelCls}>Booking window (days)</label>
@@ -199,17 +219,27 @@ export default function SettingsPage() {
               min={1}
               value={settings.booking_window_days}
               onChange={(e) =>
-                setSettings({ ...settings, booking_window_days: Number(e.target.value) })
+                setSettings({
+                  ...settings,
+                  booking_window_days: Number(e.target.value),
+                })
               }
               className={inputCls}
             />
-            <p className="mt-1.5 text-xs text-ink/50">How far ahead they can book</p>
+            <p className="mt-1.5 text-xs text-ink/50">
+              How far ahead they can book
+            </p>
           </div>
           <div>
             <label className={labelCls}>Slot interval</label>
             <select
               value={settings.slot_step_mins}
-              onChange={(e) => setSettings({ ...settings, slot_step_mins: Number(e.target.value) })}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  slot_step_mins: Number(e.target.value),
+                })
+              }
               className={inputCls}
             >
               {[15, 30, 45, 60].map((s) => (
@@ -225,55 +255,123 @@ export default function SettingsPage() {
 
       <div className={cardCls}>
         <h2 className="mb-2 text-sm font-bold">Integrations</h2>
-        <p className="mb-4 text-sm text-ink/60">
-          Connect <a href="https://granola.ai" target="_blank" rel="noreferrer" className="underline underline-offset-2">Granola</a>{" "}
-          and your meeting notes turn into to-dos automatically after each call.
+        <p className="mb-5 text-sm text-ink/60">
+          Record new meeting notes with BookMe Notes, or import existing notes
+          from Granola.
         </p>
-        {granolaConnected ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="card-flat bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
-              Granola connected
-            </span>
-            <button
-              onClick={() => saveGranola("")}
-              disabled={granolaBusy}
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
-            >
-              Disconnect
-            </button>
-          </div>
-        ) : (
-          <div>
-            <a href="/api/granola/connect" className="btn btn-primary px-5 py-2.5 text-sm">
-              Connect Granola
-            </a>
-            <p className="mt-2 text-xs text-ink/50">
-              One click — you&apos;ll approve access in your browser, no keys to copy.
-            </p>
-            <details className="mt-3">
-              <summary className="mono-label cursor-pointer text-ink/50">
-                use an api key instead
-              </summary>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <input
-                  type="password"
-                  value={granolaKey}
-                  onChange={(e) => setGranolaKey(e.target.value)}
-                  placeholder="grn_… (Granola app → Settings → API keys)"
-                  className="retro-input flex-1"
-                />
-                <button
-                  onClick={() => saveGranola(granolaKey)}
-                  disabled={granolaBusy || !granolaKey.trim()}
-                  className="btn px-4 py-2 text-sm"
-                >
-                  {granolaBusy ? "Checking…" : "Connect"}
-                </button>
+
+        <div className="card-flat mb-4 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 text-base">
+                  ◉
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold">BookMe Notes</h3>
+                  <p className="text-[11px] font-semibold text-ink/45">
+                    powered by Recall
+                  </p>
+                </div>
               </div>
-            </details>
+              <p className="mt-2 max-w-md text-xs leading-relaxed text-ink/60">
+                BookMe Desktop detects your calls and records a live,
+                speaker-attributed transcript when you choose to take notes.
+              </p>
+            </div>
+            {bookmeNotesDesktop ? (
+              <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
+                Recorder connected
+              </span>
+            ) : (
+              <span className="rounded-full bg-cream px-3 py-1.5 text-xs font-bold text-ink/55">
+                Desktop app required
+              </span>
+            )}
           </div>
-        )}
-        {granolaMsg && <p className="mt-3 text-sm font-semibold">{granolaMsg}</p>}
+          <div className="mt-3">
+            {bookmeNotesDesktop ? (
+              <a
+                href="/dashboard/notes"
+                className="btn inline-flex px-4 py-2 text-xs"
+              >
+                Open Meeting Notes
+              </a>
+            ) : (
+              <p className="text-xs text-ink/50">
+                Open Settings inside BookMe Desktop to see the live recorder
+                connection.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t border-ink/10 pt-4">
+          <h3 className="mb-1 text-sm font-bold">Granola</h3>
+          <p className="mb-4 text-xs text-ink/60">
+            Optional: connect{" "}
+            <a
+              href="https://granola.ai"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              Granola
+            </a>{" "}
+            to import its notes and turn them into to-dos.
+          </p>
+          {granolaConnected ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="card-flat bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
+                Granola connected
+              </span>
+              <button
+                onClick={() => saveGranola("")}
+                disabled={granolaBusy}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <div>
+              <a
+                href="/api/granola/connect"
+                className="btn btn-primary px-5 py-2.5 text-sm"
+              >
+                Connect Granola
+              </a>
+              <p className="mt-2 text-xs text-ink/50">
+                One click — you&apos;ll approve access in your browser, no keys
+                to copy.
+              </p>
+              <details className="mt-3">
+                <summary className="mono-label cursor-pointer text-ink/50">
+                  use an api key instead
+                </summary>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <input
+                    type="password"
+                    value={granolaKey}
+                    onChange={(e) => setGranolaKey(e.target.value)}
+                    placeholder="grn_… (Granola app → Settings → API keys)"
+                    className="retro-input flex-1"
+                  />
+                  <button
+                    onClick={() => saveGranola(granolaKey)}
+                    disabled={granolaBusy || !granolaKey.trim()}
+                    className="btn px-4 py-2 text-sm"
+                  >
+                    {granolaBusy ? "Checking…" : "Connect"}
+                  </button>
+                </div>
+              </details>
+            </div>
+          )}
+          {granolaMsg && (
+            <p className="mt-3 text-sm font-semibold">{granolaMsg}</p>
+          )}
+        </div>
       </div>
 
       {error && <p className="mb-3 text-sm text-rose-600">{error}</p>}
