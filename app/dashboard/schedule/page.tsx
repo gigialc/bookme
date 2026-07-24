@@ -16,6 +16,7 @@ import TimezoneSelect from "@/components/TimezoneSelect";
 
 type CalendarEvent = {
   id: string;
+  eventId: string;
   title: string;
   startIso: string;
   endIso: string;
@@ -140,6 +141,9 @@ export default function SchedulePage() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
+  const [editingTime, setEditingTime] = useState<{ date: string; start: string; end: string } | null>(null);
+  const [mutating, setMutating] = useState(false);
+  const [mutateError, setMutateError] = useState("");
   const [calPickerOpen, setCalPickerOpen] = useState(false);
   const [drag, setDrag] = useState<TimeSelection | null>(null);
   const [draft, setDraft] = useState<TimeSelection | null>(null);
@@ -295,6 +299,74 @@ export default function SchedulePage() {
     (iso: string) => DateTime.fromISO(iso).setZone(tz ?? "local"),
     [tz]
   );
+
+  const openEvent = (e: CalendarEvent) => {
+    setSelected(e);
+    setEditingTime(null);
+    setMutateError("");
+  };
+
+  const canEdit = (e: CalendarEvent) =>
+    !!e.eventId &&
+    calendars.some(
+      (c) =>
+        c.accountEmail === e.accountEmail &&
+        c.id === e.calendarId &&
+        (c.accessRole === "owner" || c.accessRole === "writer")
+    );
+
+  async function moveSelected() {
+    if (!selected || !editingTime) return;
+    const zone = tz === "local" ? DateTime.local().zoneName! : tz!;
+    const start = DateTime.fromISO(`${editingTime.date}T${editingTime.start}`, { zone });
+    const end = DateTime.fromISO(`${editingTime.date}T${editingTime.end}`, { zone });
+    if (!start.isValid || !end.isValid || end <= start) {
+      setMutateError("End time must be after start time.");
+      return;
+    }
+    setMutating(true);
+    setMutateError("");
+    const res = await fetch("/api/admin/schedule", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accountEmail: selected.accountEmail,
+        calendarId: selected.calendarId,
+        eventId: selected.eventId,
+        startIso: start.toISO(),
+        endIso: end.toISO(),
+        timezone: zone,
+      }),
+    });
+    setMutating(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => null);
+      setMutateError(d?.error || "Couldn't move the event — try again.");
+      return;
+    }
+    setSelected(null);
+    setEditingTime(null);
+    load();
+  }
+
+  async function cancelSelected() {
+    if (!selected) return;
+    if (!confirm(`Cancel “${selected.title}”? Guests will be emailed.`)) return;
+    setMutating(true);
+    setMutateError("");
+    const res = await fetch(
+      `/api/admin/schedule?accountEmail=${encodeURIComponent(selected.accountEmail)}&calendarId=${encodeURIComponent(selected.calendarId)}&eventId=${encodeURIComponent(selected.eventId)}`,
+      { method: "DELETE" }
+    );
+    setMutating(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => null);
+      setMutateError(d?.error || "Couldn't cancel the event — try again.");
+      return;
+    }
+    setSelected(null);
+    load();
+  }
 
   function eventsForDay(day: DateTime) {
     const dayInt = Interval.fromDateTimes(day, day.plus({ days: 1 }));
@@ -494,7 +566,7 @@ export default function SchedulePage() {
                       {dayData.allDay.slice(0, 2).map((e, i) => (
                         <button
                           key={i}
-                          onClick={() => setSelected(e)}
+                          onClick={() => openEvent(e)}
                           title={`${e.title} — ${e.accountEmail}`}
                           className="block w-full truncate rounded border border-ink/30 px-1 py-0.5 text-left text-[10px] font-semibold hover:border-ink"
                           style={{ background: `${colorFor(e.accountEmail)}26` }}
@@ -558,7 +630,7 @@ export default function SchedulePage() {
                       return (
                         <button
                           key={i}
-                          onClick={() => setSelected(p.event)}
+                          onClick={() => openEvent(p.event)}
                           className="absolute overflow-hidden rounded-md border border-ink/40 px-1.5 py-0.5 text-left transition hover:border-ink hover:shadow-[2px_2px_0_#1a1a1a]"
                           style={{
                             top: p.top,
@@ -693,6 +765,50 @@ export default function SchedulePage() {
                 )}
               </div>
 
+              {editingTime && (
+                <div className="card-flat mt-4 space-y-2 bg-cream p-3">
+                  <p className="mono-label text-ink/50">move to</p>
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <input
+                      type="date"
+                      value={editingTime.date}
+                      onChange={(e) => setEditingTime({ ...editingTime, date: e.target.value })}
+                      className="retro-input !w-auto !px-2 !py-1 text-xs font-semibold"
+                    />
+                    <input
+                      type="time"
+                      value={editingTime.start}
+                      onChange={(e) => setEditingTime({ ...editingTime, start: e.target.value })}
+                      className="retro-input !w-auto !px-2 !py-1 text-xs font-semibold"
+                    />
+                    <span className="text-ink/50">–</span>
+                    <input
+                      type="time"
+                      value={editingTime.end}
+                      onChange={(e) => setEditingTime({ ...editingTime, end: e.target.value })}
+                      className="retro-input !w-auto !px-2 !py-1 text-xs font-semibold"
+                    />
+                    <button
+                      onClick={moveSelected}
+                      disabled={mutating}
+                      className="btn btn-primary px-3 py-1.5 text-xs disabled:opacity-50"
+                    >
+                      {mutating ? "Moving…" : "Move"}
+                    </button>
+                    <button
+                      onClick={() => setEditingTime(null)}
+                      className="btn-plain px-3 py-1.5 text-xs font-bold"
+                    >
+                      Keep
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-ink/50">Guests get an email with the new time.</p>
+                </div>
+              )}
+              {mutateError && (
+                <p className="mt-3 text-xs font-bold text-rose-600">{mutateError}</p>
+              )}
+
               <div className="mt-5 flex flex-wrap gap-2">
                 {selected.meetLink && (
                   <a
@@ -713,6 +829,32 @@ export default function SchedulePage() {
                   >
                     Open in Google Calendar
                   </a>
+                )}
+                {canEdit(selected) && !selected.allDay && !editingTime && (
+                  <button
+                    onClick={() => {
+                      const s = inTz(selected.startIso);
+                      const e = inTz(selected.endIso);
+                      setMutateError("");
+                      setEditingTime({
+                        date: s.toISODate()!,
+                        start: s.toFormat("HH:mm"),
+                        end: e.toFormat("HH:mm"),
+                      });
+                    }}
+                    className="btn px-4 py-2 text-xs"
+                  >
+                    Move
+                  </button>
+                )}
+                {canEdit(selected) && (
+                  <button
+                    onClick={cancelSelected}
+                    disabled={mutating}
+                    className="rounded-lg px-4 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
+                  >
+                    Cancel event
+                  </button>
                 )}
               </div>
             </div>

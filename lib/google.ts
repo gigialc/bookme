@@ -190,8 +190,45 @@ export async function cancelBookingEvent(account: Account, eventId: string): Pro
   await calendar.events.delete({ calendarId: "primary", eventId, sendUpdates: "all" });
 }
 
+/** Move (and optionally retitle) an existing event; guests are emailed the update. */
+export async function updateScheduleEvent(opts: {
+  account: Account;
+  calendarId: string;
+  eventId: string;
+  startIso: string;
+  endIso: string;
+  timezone: string;
+  summary?: string;
+}): Promise<void> {
+  const auth = authedClient(opts.account.refresh_token);
+  const calendar = google.calendar({ version: "v3", auth });
+  await calendar.events.patch({
+    calendarId: opts.calendarId,
+    eventId: opts.eventId,
+    sendUpdates: "all",
+    requestBody: {
+      start: { dateTime: opts.startIso, timeZone: opts.timezone },
+      end: { dateTime: opts.endIso, timeZone: opts.timezone },
+      ...(opts.summary ? { summary: opts.summary } : {}),
+    },
+  });
+}
+
+/** Delete an event from any calendar; guests are emailed the cancellation. */
+export async function deleteScheduleEvent(
+  account: Account,
+  calendarId: string,
+  eventId: string
+): Promise<void> {
+  const auth = authedClient(account.refresh_token);
+  const calendar = google.calendar({ version: "v3", auth });
+  await calendar.events.delete({ calendarId, eventId, sendUpdates: "all" });
+}
+
 export type CalendarEvent = {
   id: string;
+  /** The per-calendar Google event id — needed to update or delete the event. */
+  eventId: string;
   title: string;
   startIso: string;
   endIso: string;
@@ -263,6 +300,7 @@ export async function eventsForAccount(
       if (!start || !end) continue;
       events.push({
         id: e.iCalUID ?? e.id ?? `${start}-${e.summary}`,
+        eventId: e.id ?? "",
         // Untitled events are usually Google's "busy" mirror blocks
         // from another calendar — label them the way Google does.
         title: e.summary || "Busy",

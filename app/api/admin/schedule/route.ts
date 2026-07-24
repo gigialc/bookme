@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DateTime } from "luxon";
 import { requireUser } from "@/lib/admin";
-import { allCalendarEvents, createScheduleEvent } from "@/lib/google";
+import {
+  allCalendarEvents,
+  createScheduleEvent,
+  deleteScheduleEvent,
+  updateScheduleEvent,
+} from "@/lib/google";
 import { query, Account } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -83,4 +88,88 @@ export async function POST(req: NextRequest) {
       { status: 502 }
     );
   }
+}
+
+export async function PATCH(req: NextRequest) {
+  const userId = await requireUser();
+  if (userId instanceof NextResponse) return userId;
+
+  const body = await req.json().catch(() => null);
+  const { accountEmail, calendarId, eventId, startIso, endIso, timezone } = body ?? {};
+  if (
+    typeof accountEmail !== "string" ||
+    typeof calendarId !== "string" ||
+    typeof eventId !== "string" ||
+    !calendarId ||
+    !eventId
+  ) {
+    return NextResponse.json({ error: "missing event" }, { status: 400 });
+  }
+  const start = DateTime.fromISO(typeof startIso === "string" ? startIso : "");
+  const end = DateTime.fromISO(typeof endIso === "string" ? endIso : "");
+  if (!start.isValid || !end.isValid || end <= start) {
+    return NextResponse.json({ error: "bad time range" }, { status: 400 });
+  }
+
+  const [account] = await query<Account>(
+    "SELECT * FROM accounts WHERE user_id = $1 AND email = $2",
+    [userId, accountEmail]
+  );
+  if (!account) return NextResponse.json({ error: "unknown account" }, { status: 400 });
+
+  try {
+    await updateScheduleEvent({
+      account,
+      calendarId,
+      eventId,
+      startIso: start.toISO()!,
+      endIso: end.toISO()!,
+      timezone: typeof timezone === "string" && timezone ? timezone : "UTC",
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Google Calendar rejected the change — only events you organise can be moved." },
+      { status: 502 }
+    );
+  }
+
+  // If this event came from a bookme booking, keep our record in sync.
+  await query(
+    "UPDATE bookings SET start_ts = $1, end_ts = $2 WHERE user_id = $3 AND google_event_id = $4",
+    [start.toUTC().toISO(), end.toUTC().toISO(), userId, eventId]
+  );
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(req: NextRequest) {
+  const userId = await requireUser();
+  if (userId instanceof NextResponse) return userId;
+
+  const accountEmail = req.nextUrl.searchParams.get("accountEmail");
+  const calendarId = req.nextUrl.searchParams.get("calendarId");
+  const eventId = req.nextUrl.searchParams.get("eventId");
+  if (!accountEmail || !calendarId || !eventId) {
+    return NextResponse.json({ error: "missing event" }, { status: 400 });
+  }
+
+  const [account] = await query<Account>(
+    "SELECT * FROM accounts WHERE user_id = $1 AND email = $2",
+    [userId, accountEmail]
+  );
+  if (!account) return NextResponse.json({ error: "unknown account" }, { status: 400 });
+
+  try {
+    await deleteScheduleEvent(account, calendarId, eventId);
+  } catch {
+    return NextResponse.json(
+      { error: "Google Calendar rejected the delete — only events you organise can be cancelled." },
+      { status: 502 }
+    );
+  }
+
+  await query(
+    "UPDATE bookings SET status = 'cancelled' WHERE user_id = $1 AND google_event_id = $2",
+    [userId, eventId]
+  );
+  return NextResponse.json({ ok: true });
 }
