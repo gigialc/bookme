@@ -190,7 +190,7 @@ export async function cancelBookingEvent(account: Account, eventId: string): Pro
   await calendar.events.delete({ calendarId: "primary", eventId, sendUpdates: "all" });
 }
 
-/** Move (and optionally retitle) an existing event; guests are emailed the update. */
+/** Update an existing event — only the provided fields change; guests are emailed. */
 export async function updateScheduleEvent(opts: {
   account: Account;
   calendarId: string;
@@ -199,6 +199,9 @@ export async function updateScheduleEvent(opts: {
   endIso: string;
   timezone: string;
   summary?: string;
+  location?: string;
+  description?: string;
+  attendees?: string[];
 }): Promise<void> {
   const auth = authedClient(opts.account.refresh_token);
   const calendar = google.calendar({ version: "v3", auth });
@@ -209,7 +212,12 @@ export async function updateScheduleEvent(opts: {
     requestBody: {
       start: { dateTime: opts.startIso, timeZone: opts.timezone },
       end: { dateTime: opts.endIso, timeZone: opts.timezone },
-      ...(opts.summary ? { summary: opts.summary } : {}),
+      ...(opts.summary !== undefined ? { summary: opts.summary } : {}),
+      ...(opts.location !== undefined ? { location: opts.location } : {}),
+      ...(opts.description !== undefined ? { description: opts.description } : {}),
+      ...(opts.attendees !== undefined
+        ? { attendees: opts.attendees.map((email) => ({ email })) }
+        : {}),
     },
   });
 }

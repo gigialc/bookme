@@ -95,7 +95,8 @@ export async function PATCH(req: NextRequest) {
   if (userId instanceof NextResponse) return userId;
 
   const body = await req.json().catch(() => null);
-  const { accountEmail, calendarId, eventId, startIso, endIso, timezone } = body ?? {};
+  const { accountEmail, calendarId, eventId, startIso, endIso, timezone, title, location, description, guests } =
+    body ?? {};
   if (
     typeof accountEmail !== "string" ||
     typeof calendarId !== "string" ||
@@ -125,6 +126,15 @@ export async function PATCH(req: NextRequest) {
       startIso: start.toISO()!,
       endIso: end.toISO()!,
       timezone: typeof timezone === "string" && timezone ? timezone : "UTC",
+      summary:
+        typeof title === "string" ? title.trim().slice(0, 300) || "(No title)" : undefined,
+      location: typeof location === "string" ? location.trim().slice(0, 500) : undefined,
+      description: typeof description === "string" ? description.trim().slice(0, 5000) : undefined,
+      attendees: Array.isArray(guests)
+        ? guests
+            .filter((g): g is string => typeof g === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g))
+            .slice(0, 30)
+        : undefined,
     });
   } catch {
     return NextResponse.json(

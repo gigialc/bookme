@@ -43,6 +43,17 @@ type CalendarInfo = {
 /** A drag-selected slice of a day, in fractional hours (e.g. 17.5 = 5:30pm). */
 type TimeSelection = { day: DateTime; startH: number; endH: number };
 
+/** Editable fields of an existing event, as shown in the detail window. */
+type EditForm = {
+  date: string;
+  start: string;
+  end: string;
+  title: string;
+  guests: string;
+  location: string;
+  description: string;
+};
+
 /** 5:30pm-style label from fractional hours. */
 const fmtH = (h: number) =>
   DateTime.fromObject({ hour: Math.floor(h) % 24, minute: Math.round((h % 1) * 60) }).toFormat(
@@ -141,7 +152,8 @@ export default function SchedulePage() {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
-  const [editingTime, setEditingTime] = useState<{ date: string; start: string; end: string } | null>(null);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
+  const editInitial = useRef<EditForm | null>(null);
   const [mutating, setMutating] = useState(false);
   const [mutateError, setMutateError] = useState("");
   const [calPickerOpen, setCalPickerOpen] = useState(false);
@@ -317,7 +329,27 @@ export default function SchedulePage() {
 
   const openEvent = (e: CalendarEvent) => {
     setSelected(e);
-    setEditingTime(null);
+    setEditForm(null);
+    setMutateError("");
+  };
+
+  const beginEdit = (e: CalendarEvent) => {
+    const s = inTz(e.startIso);
+    const en = inTz(e.endIso);
+    const form: EditForm = {
+      date: s.toISODate()!,
+      start: s.toFormat("HH:mm"),
+      end: en.toFormat("HH:mm"),
+      title: e.title,
+      guests: e.attendees
+        .map((a) => a.email)
+        .filter((em) => em && em !== e.accountEmail)
+        .join(", "),
+      location: e.location ?? "",
+      description: e.description ? stripHtml(e.description) : "",
+    };
+    editInitial.current = form;
+    setEditForm(form);
     setMutateError("");
   };
 
@@ -330,17 +362,30 @@ export default function SchedulePage() {
         (c.accessRole === "owner" || c.accessRole === "writer")
     );
 
-  async function moveSelected() {
-    if (!selected || !editingTime) return;
+  async function saveEdit() {
+    if (!selected || !editForm) return;
     const zone = tz === "local" ? DateTime.local().zoneName! : tz!;
-    const start = DateTime.fromISO(`${editingTime.date}T${editingTime.start}`, { zone });
-    const end = DateTime.fromISO(`${editingTime.date}T${editingTime.end}`, { zone });
+    const start = DateTime.fromISO(`${editForm.date}T${editForm.start}`, { zone });
+    const end = DateTime.fromISO(`${editForm.date}T${editForm.end}`, { zone });
     if (!start.isValid || !end.isValid || end <= start) {
       setMutateError("End time must be after start time.");
       return;
     }
     setMutating(true);
     setMutateError("");
+    // Only send what actually changed, so untouched fields keep Google's
+    // original value (e.g. rich-text descriptions stay formatted).
+    const init = editInitial.current;
+    const changes: Record<string, unknown> = {};
+    if (!init || editForm.title !== init.title) changes.title = editForm.title;
+    if (!init || editForm.location !== init.location) changes.location = editForm.location;
+    if (!init || editForm.description !== init.description) changes.description = editForm.description;
+    if (!init || editForm.guests !== init.guests) {
+      changes.guests = editForm.guests
+        .split(/[,;\s]+/)
+        .map((g) => g.trim())
+        .filter(Boolean);
+    }
     const res = await fetch("/api/admin/schedule", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -351,16 +396,17 @@ export default function SchedulePage() {
         startIso: start.toISO(),
         endIso: end.toISO(),
         timezone: zone,
+        ...changes,
       }),
     });
     setMutating(false);
     if (!res.ok) {
       const d = await res.json().catch(() => null);
-      setMutateError(d?.error || "Couldn't move the event — try again.");
+      setMutateError(d?.error || "Couldn't update the event — try again.");
       return;
     }
     setSelected(null);
-    setEditingTime(null);
+    setEditForm(null);
     load();
   }
 
@@ -917,44 +963,71 @@ export default function SchedulePage() {
                 )}
               </div>
 
-              {editingTime && (
-                <div className="card-flat mt-4 space-y-2 bg-cream p-3">
-                  <p className="mono-label text-ink/50">move to</p>
+              {editForm && (
+                <div className="card-flat mt-4 space-y-3 bg-cream p-3">
+                  <p className="mono-label text-ink/50">edit event</p>
+                  <input
+                    value={editForm.title}
+                    onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                    placeholder="Title"
+                    className="w-full border-b-2 border-ink bg-transparent pb-1 text-sm font-bold outline-none placeholder:text-ink/30"
+                  />
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <input
                       type="date"
-                      value={editingTime.date}
-                      onChange={(e) => setEditingTime({ ...editingTime, date: e.target.value })}
+                      value={editForm.date}
+                      onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
                       className="retro-input !w-auto !px-2 !py-1 text-xs font-semibold"
                     />
                     <input
                       type="time"
-                      value={editingTime.start}
-                      onChange={(e) => setEditingTime({ ...editingTime, start: e.target.value })}
+                      value={editForm.start}
+                      onChange={(e) => setEditForm({ ...editForm, start: e.target.value })}
                       className="retro-input !w-auto !px-2 !py-1 text-xs font-semibold"
                     />
                     <span className="text-ink/50">–</span>
                     <input
                       type="time"
-                      value={editingTime.end}
-                      onChange={(e) => setEditingTime({ ...editingTime, end: e.target.value })}
+                      value={editForm.end}
+                      onChange={(e) => setEditForm({ ...editForm, end: e.target.value })}
                       className="retro-input !w-auto !px-2 !py-1 text-xs font-semibold"
                     />
+                  </div>
+                  <input
+                    value={editForm.guests}
+                    onChange={(e) => setEditForm({ ...editForm, guests: e.target.value })}
+                    placeholder="Guests (emails, comma-separated)"
+                    className="retro-input !py-1.5 text-xs"
+                  />
+                  <input
+                    value={editForm.location}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                    placeholder="Location"
+                    className="retro-input !py-1.5 text-xs"
+                  />
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    rows={2}
+                    placeholder="Description"
+                    className="retro-input text-xs"
+                  />
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={moveSelected}
+                      onClick={saveEdit}
                       disabled={mutating}
-                      className="btn btn-primary px-3 py-1.5 text-xs disabled:opacity-50"
+                      className="btn btn-primary px-4 py-1.5 text-xs disabled:opacity-50"
                     >
-                      {mutating ? "Moving…" : "Move"}
+                      {mutating ? "Saving…" : "Save"}
                     </button>
                     <button
-                      onClick={() => setEditingTime(null)}
+                      onClick={() => setEditForm(null)}
                       className="btn-plain px-3 py-1.5 text-xs font-bold"
                     >
-                      Keep
+                      Discard
                     </button>
+                    <span className="text-[11px] text-ink/50">Guests get an email update.</span>
                   </div>
-                  <p className="text-[11px] text-ink/50">Guests get an email with the new time.</p>
                 </div>
               )}
               {mutateError && (
@@ -982,21 +1055,9 @@ export default function SchedulePage() {
                     Open in Google Calendar
                   </a>
                 )}
-                {canEdit(selected) && !selected.allDay && !editingTime && (
-                  <button
-                    onClick={() => {
-                      const s = inTz(selected.startIso);
-                      const e = inTz(selected.endIso);
-                      setMutateError("");
-                      setEditingTime({
-                        date: s.toISODate()!,
-                        start: s.toFormat("HH:mm"),
-                        end: e.toFormat("HH:mm"),
-                      });
-                    }}
-                    className="btn px-4 py-2 text-xs"
-                  >
-                    Move
+                {canEdit(selected) && !selected.allDay && !editForm && (
+                  <button onClick={() => beginEdit(selected)} className="btn px-4 py-2 text-xs">
+                    Edit
                   </button>
                 )}
                 {canEdit(selected) && (
