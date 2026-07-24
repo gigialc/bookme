@@ -90,6 +90,15 @@ CREATE TABLE IF NOT EXISTS availability (
   start_time TEXT NOT NULL,
   end_time TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS travel_schedules (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  label TEXT NOT NULL DEFAULT '',
+  start_date TEXT NOT NULL,
+  end_date TEXT NOT NULL,
+  timezone TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 CREATE TABLE IF NOT EXISTS bookings (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -237,6 +246,16 @@ export type AvailabilityRule = {
   weekday: number; // 0 = Monday ... 6 = Sunday (luxon weekday - 1)
   start_time: string; // "09:00"
   end_time: string; // "17:00"
+};
+
+/** While travelling, weekly hours apply in `timezone` instead of the home timezone. */
+export type TravelSchedule = {
+  id: number;
+  user_id: number;
+  label: string;
+  start_date: string; // "2026-08-01", inclusive, a calendar date in the travel timezone
+  end_date: string; // inclusive
+  timezone: string;
 };
 
 export type Booking = {

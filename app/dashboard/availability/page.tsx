@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { PlusIcon } from "@/components/icons";
+import TimezoneSelect from "@/components/TimezoneSelect";
 
 type Rule = { weekday: number; start_time: string; end_time: string };
+type Trip = { label: string; start_date: string; end_date: string; timezone: string };
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export default function AvailabilityPage() {
   const [rules, setRules] = useState<Rule[] | null>(null);
+  const [trips, setTrips] = useState<Trip[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -16,6 +19,9 @@ export default function AvailabilityPage() {
     fetch("/api/admin/availability")
       .then((r) => r.json())
       .then((d) => setRules(d.rules ?? []));
+    fetch("/api/admin/travel")
+      .then((r) => r.json())
+      .then((d) => setTrips(d.travel ?? []));
   }, []);
 
   function rulesFor(day: number) {
@@ -27,26 +33,46 @@ export default function AvailabilityPage() {
     setSaved(false);
   }
 
+  function updateTrips(next: Trip[]) {
+    setTrips(next);
+    setSaved(false);
+  }
+
   async function save() {
-    if (!rules) return;
+    if (!rules || !trips) return;
     setSaving(true);
-    const res = await fetch("/api/admin/availability", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rules }),
-    });
-    if (res.ok) {
-      const d = await res.json();
-      setRules(d.rules);
+    const [rulesRes, travelRes] = await Promise.all([
+      fetch("/api/admin/availability", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rules }),
+      }),
+      fetch("/api/admin/travel", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ travel: trips }),
+      }),
+    ]);
+    if (rulesRes.ok && travelRes.ok) {
+      const [rulesData, travelData] = await Promise.all([rulesRes.json(), travelRes.json()]);
+      setRules(rulesData.rules);
+      setTrips(travelData.travel);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-    } else {
+    } else if (!rulesRes.ok) {
       alert("Please check your times — end must be after start (HH:MM).");
+    } else {
+      const d = await travelRes.json().catch(() => null);
+      alert(
+        d?.error === "overlapping travel schedules"
+          ? "Two of your travel schedules overlap — give each trip its own dates."
+          : "Please check your travel dates — each trip needs a start and end date."
+      );
     }
     setSaving(false);
   }
 
-  if (rules === null) return <p className="text-sm text-ink/50">Loading…</p>;
+  if (rules === null || trips === null) return <p className="text-sm text-ink/50">Loading…</p>;
 
   return (
     <div className="max-w-2xl">
@@ -133,6 +159,89 @@ export default function AvailabilityPage() {
             </div>
           );
         })}
+      </div>
+
+      <h2 className="mb-1 text-lg font-bold tracking-tight">Travel schedules ✈️</h2>
+      <p className="mb-4 text-sm text-ink/60">
+        Travelling? Pick a date range and a timezone, and your weekly hours above will apply in
+        that timezone for those dates — so 9–5 stays 9–5 wherever you are.
+      </p>
+
+      <div className="mb-6 card overflow-hidden">
+        {trips.length === 0 && (
+          <p className="p-4 text-sm text-ink/50">No trips planned — your home timezone applies.</p>
+        )}
+        {trips.map((trip, idx) => (
+          <div key={idx} className="border-b border-ink/10 p-4 last:border-b-0">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <input
+                type="text"
+                value={trip.label}
+                placeholder="Trip to Madrid"
+                onChange={(e) => {
+                  const next = [...trips];
+                  next[idx] = { ...trip, label: e.target.value };
+                  updateTrips(next);
+                }}
+                className="retro-input w-36 px-2.5 py-1.5"
+              />
+              <input
+                type="date"
+                value={trip.start_date}
+                onChange={(e) => {
+                  const next = [...trips];
+                  next[idx] = { ...trip, start_date: e.target.value };
+                  updateTrips(next);
+                }}
+                className="retro-input w-auto px-2.5 py-1.5"
+                aria-label="Trip start date"
+              />
+              <span className="text-ink/50">–</span>
+              <input
+                type="date"
+                value={trip.end_date}
+                onChange={(e) => {
+                  const next = [...trips];
+                  next[idx] = { ...trip, end_date: e.target.value };
+                  updateTrips(next);
+                }}
+                className="retro-input w-auto px-2.5 py-1.5"
+                aria-label="Trip end date"
+              />
+              <TimezoneSelect
+                value={trip.timezone}
+                onChange={(tz) => {
+                  const next = [...trips];
+                  next[idx] = { ...trip, timezone: tz };
+                  updateTrips(next);
+                }}
+                className="retro-input w-auto px-2.5 py-1.5"
+                ariaLabel="Trip timezone"
+              />
+              <button
+                onClick={() => updateTrips(trips.filter((_, i) => i !== idx))}
+                className="px-1 text-ink/30 transition hover:text-rose-500"
+                aria-label="Remove trip"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ))}
+        <div className="p-4">
+          <button
+            onClick={() => {
+              const today = new Date().toISOString().slice(0, 10);
+              updateTrips([
+                ...trips,
+                { label: "", start_date: today, end_date: today, timezone: "Europe/London" },
+              ]);
+            }}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-ink/60 transition hover:text-ink"
+          >
+            <PlusIcon className="h-3.5 w-3.5" /> Add travel schedule
+          </button>
+        </div>
       </div>
 
       <button
