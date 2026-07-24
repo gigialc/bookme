@@ -150,6 +150,21 @@ export default function SchedulePage() {
   const dragInfo = useRef<{ day: DateTime; anchor: number; rectTop: number } | null>(null);
   const dragVal = useRef<TimeSelection | null>(null);
   dragVal.current = drag;
+
+  // Drag-to-move: grab an event block and drop it on a new time or day.
+  type EventDrag = {
+    event: CalendarEvent;
+    durationH: number;
+    day: DateTime;
+    startH: number;
+    moved: boolean;
+  };
+  const [evDrag, setEvDrag] = useState<EventDrag | null>(null);
+  const evDragVal = useRef<EventDrag | null>(null);
+  evDragVal.current = evDrag;
+  const evDragInfo = useRef<{ offsetH: number; startX: number; startY: number } | null>(null);
+  const justDragged = useRef(false);
+  const dayCols = useRef<(HTMLDivElement | null)[]>([]);
   const hourPx = HOUR_PX;
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -365,6 +380,110 @@ export default function SchedulePage() {
       return;
     }
     setSelected(null);
+    load();
+  }
+
+  const beginEventDrag = (ev: CalendarEvent, e: React.MouseEvent<HTMLElement>) => {
+    if (e.button !== 0 || ev.allDay || !canEdit(ev)) return;
+    const start = inTz(ev.startIso);
+    const end = inTz(ev.endIso);
+    const durationH = Math.max(end.diff(start, "hours").hours, 0.25);
+    const rect = e.currentTarget.getBoundingClientRect();
+    evDragInfo.current = {
+      offsetH: (e.clientY - rect.top) / hourPx,
+      startX: e.clientX,
+      startY: e.clientY,
+    };
+    setEvDrag({
+      event: ev,
+      durationH,
+      day: start.startOf("day"),
+      startH: start.hour + start.minute / 60,
+      moved: false,
+    });
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  useEffect(() => {
+    if (!evDrag) return;
+    const move = (e: MouseEvent) => {
+      const info = evDragInfo.current;
+      const cur = evDragVal.current;
+      if (!info || !cur) return;
+      const moved =
+        cur.moved || Math.abs(e.clientX - info.startX) + Math.abs(e.clientY - info.startY) > 5;
+      let day = cur.day;
+      let startH = cur.startH;
+      for (let i = 0; i < dayCols.current.length; i++) {
+        const col = dayCols.current[i];
+        if (!col || !days[i]) continue;
+        const rect = col.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX < rect.right) {
+          day = days[i];
+          // Snap to 15 minutes, keeping the point where the event was grabbed.
+          const h = (e.clientY - rect.top) / hourPx - info.offsetH;
+          startH = Math.min(24 - cur.durationH, Math.max(0, Math.round(h * 4) / 4));
+          break;
+        }
+      }
+      setEvDrag({ ...cur, day, startH, moved });
+    };
+    const up = () => {
+      const cur = evDragVal.current;
+      evDragInfo.current = null;
+      setEvDrag(null);
+      if (!cur) return;
+      if (cur.moved) {
+        justDragged.current = true;
+        void dropEvent(cur);
+      }
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evDrag !== null, days, hourPx]);
+
+  async function dropEvent(d: EventDrag) {
+    const zone = tz === "local" ? DateTime.local().zoneName! : tz!;
+    const newStart = d.day.set({
+      hour: Math.floor(d.startH),
+      minute: Math.round((d.startH % 1) * 60),
+    });
+    const newEnd = newStart.plus({ hours: d.durationH });
+    const prevStart = inTz(d.event.startIso);
+    if (newStart.toMillis() === prevStart.toMillis()) return;
+
+    // Show the event in its new spot right away; reload confirms it.
+    setEvents((prev) =>
+      prev
+        ? prev.map((e) =>
+            e.eventId === d.event.eventId && e.calendarId === d.event.calendarId
+              ? { ...e, startIso: newStart.toUTC().toISO()!, endIso: newEnd.toUTC().toISO()! }
+              : e
+          )
+        : prev
+    );
+    const res = await fetch("/api/admin/schedule", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accountEmail: d.event.accountEmail,
+        calendarId: d.event.calendarId,
+        eventId: d.event.eventId,
+        startIso: newStart.toISO(),
+        endIso: newEnd.toISO(),
+        timezone: zone,
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setError(data?.error || "Couldn't move the event — try again.");
+    }
     load();
   }
 
@@ -599,7 +718,7 @@ export default function SchedulePage() {
                 ))}
               </div>
 
-              {days.map((d) => {
+              {days.map((d, di) => {
                 const dayData = events ? eventsForDay(d) : { timed: [] as Positioned[] };
                 const isToday = d.hasSame(today, "day");
                 const now = DateTime.now().setZone(tz ?? "local");
@@ -607,6 +726,9 @@ export default function SchedulePage() {
                 return (
                   <div
                     key={d.toISO()}
+                    ref={(el) => {
+                      dayCols.current[di] = el;
+                    }}
                     onMouseDown={(e) => beginDrag(d, e)}
                     className={`relative cursor-crosshair border-l border-ink/15 ${isToday ? "bg-paper" : d.weekday >= 6 ? "bg-ink/[0.03]" : ""}`}
                     style={{ height: hours.length * hourPx }}
@@ -627,11 +749,24 @@ export default function SchedulePage() {
                     {dayData.timed.map((p, i) => {
                       const color = colorFor(p.event.accountEmail);
                       const width = 100 / p.lanes;
+                      const dragging =
+                        evDrag?.moved &&
+                        evDrag.event.eventId === p.event.eventId &&
+                        evDrag.event.calendarId === p.event.calendarId;
                       return (
                         <button
                           key={i}
-                          onClick={() => openEvent(p.event)}
-                          className="absolute overflow-hidden rounded-md border border-ink/40 px-1.5 py-0.5 text-left transition hover:border-ink hover:shadow-[2px_2px_0_#1a1a1a]"
+                          onMouseDown={(e) => beginEventDrag(p.event, e)}
+                          onClick={() => {
+                            if (justDragged.current) {
+                              justDragged.current = false;
+                              return;
+                            }
+                            openEvent(p.event);
+                          }}
+                          className={`absolute overflow-hidden rounded-md border border-ink/40 px-1.5 py-0.5 text-left transition hover:border-ink hover:shadow-[2px_2px_0_#1a1a1a] ${
+                            canEdit(p.event) && !p.event.allDay ? "cursor-grab active:cursor-grabbing" : ""
+                          } ${dragging ? "opacity-40" : ""}`}
                           style={{
                             top: p.top,
                             height: p.height,
@@ -652,6 +787,23 @@ export default function SchedulePage() {
                         </button>
                       );
                     })}
+                    {evDrag?.moved && evDrag.day.hasSame(d, "day") && (
+                      <div
+                        className="pointer-events-none absolute z-20 w-[calc(100%-3px)] overflow-hidden rounded-md border-2 border-ink bg-paper px-1.5 py-0.5 shadow-[3px_3px_0_#1a1a1a]"
+                        style={{
+                          top: evDrag.startH * hourPx,
+                          height: Math.max(evDrag.durationH * hourPx, 14),
+                          borderLeft: `4px solid ${colorFor(evDrag.event.accountEmail)}`,
+                        }}
+                      >
+                        <p className="truncate text-[11px] font-bold leading-tight">
+                          {evDrag.event.title}
+                        </p>
+                        <p className="truncate text-[10px] text-ink/60">
+                          {fmtH(evDrag.startH)} – {fmtH(evDrag.startH + evDrag.durationH)}
+                        </p>
+                      </div>
+                    )}
                     {(() => {
                       const sel = drag ?? draft;
                       if (!sel || !sel.day.hasSame(d, "day")) return null;
