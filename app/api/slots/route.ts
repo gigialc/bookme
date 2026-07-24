@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DateTime } from "luxon";
-import { query, getUserByUsername, EventType, AvailabilityRule, TravelSchedule } from "@/lib/db";
+import { query, getUserByUsername, getTravelSchedules, EventType, AvailabilityRule } from "@/lib/db";
 import { allBusy } from "@/lib/google";
 import { computeSlots } from "@/lib/slots";
 
@@ -28,10 +28,7 @@ export async function GET(req: NextRequest) {
     "SELECT * FROM availability WHERE user_id = $1",
     [user.id]
   );
-  const travel = await query<TravelSchedule>(
-    "SELECT * FROM travel_schedules WHERE user_id = $1 ORDER BY start_date",
-    [user.id]
-  );
+  const travel = await getTravelSchedules(user.id);
 
   const dayStart = DateTime.fromISO(date, { zone: tz }).startOf("day");
   if (!dayStart.isValid) return NextResponse.json({ error: "bad date" }, { status: 400 });

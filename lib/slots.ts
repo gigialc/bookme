@@ -1,17 +1,15 @@
 import { DateTime, Interval } from "luxon";
-import { AvailabilityRule, EventType, TravelSchedule } from "./db";
+import { AvailabilityRule, EventType, TravelWithRules } from "./db";
 import { BusyInterval } from "./google";
 
 export type Slot = { startIso: string; endIso: string };
 
-/** The timezone the owner's weekly hours apply in on a given calendar date. */
-export function zoneForDate(
+/** The travel schedule covering a calendar date, or null when at home. */
+export function travelForDate(
   dateIso: string,
-  homeTz: string,
-  travel: TravelSchedule[]
-): string {
-  const match = travel.find((t) => t.start_date <= dateIso && dateIso <= t.end_date);
-  return match?.timezone ?? homeTz;
+  travel: TravelWithRules[]
+): TravelWithRules | null {
+  return travel.find((t) => t.start_date <= dateIso && dateIso <= t.end_date) ?? null;
 }
 
 /** The scheduling fields of a user row (User satisfies this structurally). */
@@ -27,8 +25,8 @@ export type ScheduleConfig = {
  *
  * Availability rules are defined in the owner's timezone; the visitor's day
  * may straddle two owner-days, so both neighbouring days are expanded.
- * Travel schedules swap the owner's timezone for a date range, so each
- * candidate owner-day is expanded in whichever zone is effective that date.
+ * On dates covered by a travel schedule, the trip's own weekly hours (in the
+ * trip's timezone) replace the normal weekly availability entirely.
  */
 export function computeSlots(opts: {
   dateIso: string; // "2026-07-21" in the visitor's timezone
@@ -37,7 +35,7 @@ export function computeSlots(opts: {
   eventType: EventType;
   rules: AvailabilityRule[];
   busy: BusyInterval[];
-  travel?: TravelSchedule[];
+  travel?: TravelWithRules[];
   now?: DateTime;
 }): Slot[] {
   const { settings, eventType, rules, busy } = opts;
@@ -70,12 +68,14 @@ export function computeSlots(opts: {
         .plus({ days: dayOffset })
         .startOf("day");
       const ownerDate = ownerDay.toISODate()!;
-      if (zoneForDate(ownerDate, settings.timezone, travel) !== zone) continue;
+      const trip = travelForDate(ownerDate, travel);
+      if ((trip?.timezone ?? settings.timezone) !== zone) continue;
       if (expanded.has(`${zone}|${ownerDate}`)) continue;
       expanded.add(`${zone}|${ownerDate}`);
       const weekday = ownerDay.weekday - 1; // luxon: 1 = Monday → our 0 = Monday
+      const dayRules = trip ? trip.rules : rules;
 
-      for (const rule of rules.filter((r) => r.weekday === weekday)) {
+      for (const rule of dayRules.filter((r) => r.weekday === weekday)) {
         const [sh, sm] = rule.start_time.split(":").map(Number);
         const [eh, em] = rule.end_time.split(":").map(Number);
         const windowStart = ownerDay.set({ hour: sh, minute: sm });

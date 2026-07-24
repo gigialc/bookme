@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DateTime } from "luxon";
-import { query, getUserByUsername, EventType, AvailabilityRule, TravelSchedule } from "@/lib/db";
+import { query, getUserByUsername, getTravelSchedules, EventType, AvailabilityRule } from "@/lib/db";
 import { allBusy, createBookingEvent, getPrimaryAccount } from "@/lib/google";
 import { computeSlots } from "@/lib/slots";
 
@@ -33,10 +33,7 @@ export async function POST(req: NextRequest) {
     "SELECT * FROM availability WHERE user_id = $1",
     [owner.id]
   );
-  const travel = await query<TravelSchedule>(
-    "SELECT * FROM travel_schedules WHERE user_id = $1 ORDER BY start_date",
-    [owner.id]
-  );
+  const travel = await getTravelSchedules(owner.id);
   const visitorTz = typeof tz === "string" && tz ? tz : owner.timezone;
 
   // Re-verify the slot is still free right before booking.

@@ -99,6 +99,13 @@ CREATE TABLE IF NOT EXISTS travel_schedules (
   timezone TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE TABLE IF NOT EXISTS travel_availability (
+  id SERIAL PRIMARY KEY,
+  travel_id INTEGER NOT NULL REFERENCES travel_schedules(id) ON DELETE CASCADE,
+  weekday INTEGER NOT NULL,
+  start_time TEXT NOT NULL,
+  end_time TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS bookings (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -248,7 +255,10 @@ export type AvailabilityRule = {
   end_time: string; // "17:00"
 };
 
-/** While travelling, weekly hours apply in `timezone` instead of the home timezone. */
+/**
+ * While travelling, the trip's own weekly hours (in `timezone`) replace the
+ * normal weekly availability for every date in the range.
+ */
 export type TravelSchedule = {
   id: number;
   user_id: number;
@@ -257,6 +267,31 @@ export type TravelSchedule = {
   end_date: string; // inclusive
   timezone: string;
 };
+
+export type TravelRule = {
+  id: number;
+  travel_id: number;
+  weekday: number; // 0 = Monday ... 6 = Sunday
+  start_time: string; // "09:00"
+  end_time: string; // "17:00"
+};
+
+export type TravelWithRules = TravelSchedule & {
+  rules: Pick<TravelRule, "weekday" | "start_time" | "end_time">[];
+};
+
+export async function getTravelSchedules(userId: number): Promise<TravelWithRules[]> {
+  const trips = await query<TravelSchedule>(
+    "SELECT * FROM travel_schedules WHERE user_id = $1 ORDER BY start_date",
+    [userId]
+  );
+  if (trips.length === 0) return [];
+  const rules = await query<TravelRule>(
+    "SELECT * FROM travel_availability WHERE travel_id = ANY($1::int[]) ORDER BY weekday, start_time",
+    [trips.map((t) => t.id)]
+  );
+  return trips.map((t) => ({ ...t, rules: rules.filter((r) => r.travel_id === t.id) }));
+}
 
 export type Booking = {
   id: number;
