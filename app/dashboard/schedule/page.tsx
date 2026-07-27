@@ -95,6 +95,31 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+const URL_RE = /(https?:\/\/[^\s<>"')\]]+)/g;
+
+/** Plain text with URLs turned into clickable links that wrap instead of clipping. */
+function Linkify({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(URL_RE).map((part, i) =>
+        i % 2 === 1 ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noreferrer"
+            className="break-all font-semibold underline underline-offset-2 hover:text-red-600"
+          >
+            {part}
+          </a>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
 type Positioned = {
   event: CalendarEvent;
   top: number;
@@ -762,17 +787,27 @@ export default function SchedulePage() {
                       {d.day}
                     </p>
                     <div className="mt-1 space-y-1">
-                      {dayData.allDay.slice(0, 2).map((e, i) => (
-                        <button
-                          key={i}
-                          onClick={() => openEvent(e)}
-                          title={`${e.title} — ${e.accountEmail}`}
-                          className="block w-full truncate rounded border border-ink/30 px-1 py-0.5 text-left text-[10px] font-semibold hover:border-ink"
-                          style={{ background: `${colorFor(e.accountEmail)}26` }}
-                        >
-                          {e.title}
-                        </button>
-                      ))}
+                      {dayData.allDay.slice(0, 2).map((e, i) => {
+                        const rsvp = myAttendee(e)?.response;
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => openEvent(e)}
+                            title={`${e.title} — ${e.accountEmail}`}
+                            className={`block w-full truncate rounded border border-ink/30 px-1 py-0.5 text-left text-[10px] font-semibold hover:border-ink ${
+                              rsvp === "declined" ? "opacity-50 line-through" : ""
+                            } ${rsvp === "tentative" ? "border-dashed" : ""}`}
+                            style={{
+                              background:
+                                rsvp === "declined"
+                                  ? "transparent"
+                                  : `${colorFor(e.accountEmail)}26`,
+                            }}
+                          >
+                            {e.title}
+                          </button>
+                        );
+                      })}
                       {dayData.allDay.length > 2 && (
                         <p className="text-[10px] font-semibold text-ink/40">
                           +{dayData.allDay.length - 2} more
@@ -833,6 +868,7 @@ export default function SchedulePage() {
                         evDrag?.moved &&
                         evDrag.event.eventId === p.event.eventId &&
                         evDrag.event.calendarId === p.event.calendarId;
+                      const rsvp = myAttendee(p.event)?.response;
                       return (
                         <button
                           key={i}
@@ -846,17 +882,23 @@ export default function SchedulePage() {
                           }}
                           className={`absolute overflow-hidden rounded-md border border-ink/40 px-1.5 py-0.5 text-left transition hover:border-ink hover:shadow-[2px_2px_0_#1a1a1a] ${
                             canEdit(p.event) && !p.event.allDay ? "cursor-grab active:cursor-grabbing" : ""
-                          } ${dragging ? "opacity-40" : ""}`}
+                          } ${dragging ? "opacity-40" : ""} ${
+                            rsvp === "declined" ? "opacity-50" : ""
+                          } ${rsvp === "tentative" ? "border-dashed" : ""}`}
                           style={{
                             top: p.top,
                             height: p.height,
                             left: `${p.lane * width}%`,
                             width: `calc(${width}% - 3px)`,
-                            background: `${color}26`,
-                            borderLeft: `4px solid ${color}`,
+                            background: rsvp === "declined" ? "transparent" : `${color}26`,
+                            borderLeft: `4px ${rsvp === "tentative" ? "dashed" : "solid"} ${color}`,
                           }}
                         >
-                          <p className="truncate text-[11px] font-bold leading-tight">
+                          <p
+                            className={`truncate text-[11px] font-bold leading-tight ${
+                              rsvp === "declined" ? "line-through" : ""
+                            }`}
+                          >
                             {p.event.title}
                           </p>
                           {p.height > 34 && (
@@ -991,8 +1033,8 @@ export default function SchedulePage() {
                   </div>
                 )}
                 {selected.description && (
-                  <div className="card-flat mt-3 whitespace-pre-wrap bg-cream p-3 text-xs leading-relaxed text-ink/80">
-                    {stripHtml(selected.description)}
+                  <div className="card-flat mt-3 whitespace-pre-wrap break-words bg-cream p-3 text-xs leading-relaxed text-ink/80">
+                    <Linkify text={stripHtml(selected.description)} />
                   </div>
                 )}
               </div>
