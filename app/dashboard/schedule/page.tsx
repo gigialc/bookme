@@ -429,6 +429,40 @@ export default function SchedulePage() {
     load();
   }
 
+  const myAttendee = (e: CalendarEvent) =>
+    e.attendees.find((a) => a.email.toLowerCase() === e.accountEmail.toLowerCase()) ?? null;
+
+  async function respond(response: "accepted" | "tentative" | "declined") {
+    if (!selected) return;
+    setMutating(true);
+    setMutateError("");
+    const res = await fetch("/api/admin/schedule/rsvp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accountEmail: selected.accountEmail,
+        calendarId: selected.calendarId,
+        eventId: selected.eventId,
+        response,
+      }),
+    });
+    setMutating(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => null);
+      setMutateError(d?.error || "Couldn't send your RSVP — try again.");
+      return;
+    }
+    setSelected({
+      ...selected,
+      attendees: selected.attendees.map((a) =>
+        a.email.toLowerCase() === selected.accountEmail.toLowerCase()
+          ? { ...a, response }
+          : a
+      ),
+    });
+    load();
+  }
+
   const beginEventDrag = (ev: CalendarEvent, e: React.MouseEvent<HTMLElement>) => {
     if (e.button !== 0 || ev.allDay || !canEdit(ev)) return;
     const start = inTz(ev.startIso);
@@ -1032,6 +1066,30 @@ export default function SchedulePage() {
               )}
               {mutateError && (
                 <p className="mt-3 text-xs font-bold text-rose-600">{mutateError}</p>
+              )}
+
+              {myAttendee(selected) && (
+                <div className="mt-5 flex flex-wrap items-center gap-2">
+                  <span className="mono-label mr-1 text-ink/50">going?</span>
+                  {(
+                    [
+                      ["accepted", "Yes"],
+                      ["tentative", "Maybe"],
+                      ["declined", "No"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => respond(value)}
+                      disabled={mutating}
+                      className={`btn px-4 py-1.5 text-xs disabled:opacity-50 ${
+                        myAttendee(selected)?.response === value ? "btn-primary" : ""
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               )}
 
               <div className="mt-5 flex flex-wrap gap-2">

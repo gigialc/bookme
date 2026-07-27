@@ -222,6 +222,34 @@ export async function updateScheduleEvent(opts: {
   });
 }
 
+/** RSVP to an invite — changes only your own attendee entry on your copy of the event. */
+export async function rsvpScheduleEvent(opts: {
+  account: Account;
+  calendarId: string;
+  eventId: string;
+  response: "accepted" | "declined" | "tentative";
+}): Promise<void> {
+  const auth = authedClient(opts.account.refresh_token);
+  const calendar = google.calendar({ version: "v3", auth });
+  // Patching attendees replaces the whole list, so fetch it and change just ours.
+  const existing = await calendar.events.get({
+    calendarId: opts.calendarId,
+    eventId: opts.eventId,
+  });
+  const attendees = existing.data.attendees ?? [];
+  const self = attendees.find(
+    (a) => a.self || a.email?.toLowerCase() === opts.account.email.toLowerCase()
+  );
+  if (!self) throw new Error("not on the guest list");
+  self.responseStatus = opts.response;
+  await calendar.events.patch({
+    calendarId: opts.calendarId,
+    eventId: opts.eventId,
+    sendUpdates: "all",
+    requestBody: { attendees },
+  });
+}
+
 /** Delete an event from any calendar; guests are emailed the cancellation. */
 export async function deleteScheduleEvent(
   account: Account,
