@@ -41,6 +41,8 @@ type DesktopApi = {
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<void>;
   saveRecallApiKey: (apiKey: string) => Promise<void>;
+  /** Missing on desktop builds older than 1.0.3. */
+  deleteNote?: (id: string) => Promise<void>;
   onState: (listener: (state: DesktopState) => void) => () => void;
 };
 
@@ -78,6 +80,7 @@ export default function MeetingNotesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showRecorderSettings, setShowRecorderSettings] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const bridge = desktopApi();
@@ -87,14 +90,25 @@ export default function MeetingNotesPage() {
     return bridge.onState(setState);
   }, []);
 
-  const selected = useMemo(() => {
-    if (!state) return null;
-    return (
-      state.notes.find((note) => note.id === selectedId) ??
-      state.notes[0] ??
-      null
+  const visibleNotes = useMemo(() => {
+    if (!state) return [];
+    const q = search.trim().toLowerCase();
+    if (!q) return state.notes;
+    return state.notes.filter(
+      (note) =>
+        note.title.toLowerCase().includes(q) ||
+        (note.summary ?? "").toLowerCase().includes(q) ||
+        note.transcript.some((line) => line.text.toLowerCase().includes(q))
     );
-  }, [selectedId, state]);
+  }, [search, state]);
+
+  const selected = useMemo(
+    () =>
+      visibleNotes.find((note) => note.id === selectedId) ??
+      visibleNotes[0] ??
+      null,
+    [selectedId, visibleNotes]
+  );
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -103,6 +117,13 @@ export default function MeetingNotesPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function deleteSelected() {
+    const deleteNote = api?.deleteNote;
+    if (!selected || !deleteNote) return;
+    if (!confirm(`Delete “${selected.title}”? This can't be undone.`)) return;
+    await run(() => deleteNote(selected.id));
   }
 
   return (
@@ -167,23 +188,33 @@ export default function MeetingNotesPage() {
             </p>
           )}
 
-          <div className="grid min-h-[440px] overflow-hidden rounded-xl border-2 border-ink bg-paper shadow-[4px_4px_0_var(--ink)] md:grid-cols-[280px_1fr]">
-            <aside className="border-b-2 border-ink bg-cream/60 p-3 md:border-r-2 md:border-b-0">
-              <p className="mono-label mb-2 px-2 text-ink/50">Recorded calls</p>
+          <div className="grid min-h-[440px] gap-6 md:grid-cols-[280px_1fr]">
+            <aside className="border-b border-ink/15 pb-4 md:border-b-0 md:border-r md:pb-0 md:pr-6">
+              <p className="mono-label mb-2 text-ink/50">Recorded calls</p>
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search notes"
+                className="retro-input mb-3 !py-1.5 text-xs"
+              />
               {!state?.notes.length ? (
-                <p className="px-2 py-5 text-xs leading-relaxed text-ink/50">
+                <p className="py-5 text-xs leading-relaxed text-ink/50">
                   Your first recorded call will appear here.
+                </p>
+              ) : !visibleNotes.length ? (
+                <p className="py-5 text-xs leading-relaxed text-ink/50">
+                  No notes match &ldquo;{search}&rdquo;.
                 </p>
               ) : (
                 <div className="space-y-1.5">
-                  {state.notes.map((note) => (
+                  {visibleNotes.map((note) => (
                     <button
                       key={note.id}
                       onClick={() => setSelectedId(note.id)}
                       className={`w-full rounded-lg border-2 px-3 py-3 text-left transition ${
                         selected?.id === note.id
-                          ? "border-ink bg-paper"
-                          : "border-transparent hover:border-ink/30 hover:bg-paper/70"
+                          ? "border-ink bg-cream/70"
+                          : "border-transparent hover:border-ink/30 hover:bg-cream/50"
                       }`}
                     >
                       <span className="mb-1 block truncate text-sm font-bold">
@@ -199,8 +230,15 @@ export default function MeetingNotesPage() {
               )}
             </aside>
 
-            <section className="min-w-0 p-6 md:p-8">
-              {selected ? <NoteDetail note={selected} /> : <EmptyNotes />}
+            <section className="min-w-0">
+              {selected ? (
+                <NoteDetail
+                  note={selected}
+                  onDelete={api?.deleteNote ? deleteSelected : undefined}
+                />
+              ) : (
+                <EmptyNotes />
+              )}
             </section>
           </div>
         </>
@@ -476,7 +514,13 @@ function EmptyNotes() {
   );
 }
 
-function NoteDetail({ note }: { note: MeetingNote }) {
+function NoteDetail({
+  note,
+  onDelete,
+}: {
+  note: MeetingNote;
+  onDelete?: () => void;
+}) {
   return (
     <>
       <div className="border-b-2 border-ink/15 pb-5">
@@ -487,6 +531,14 @@ function NoteDetail({ note }: { note: MeetingNote }) {
           <span className="rounded-full bg-cream px-2 py-1 font-bold capitalize">
             {note.status}
           </span>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="ml-auto font-bold text-rose-600 hover:underline"
+            >
+              Delete
+            </button>
+          )}
         </div>
         <h2 className="text-xl font-bold">{note.title}</h2>
       </div>
