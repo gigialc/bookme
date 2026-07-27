@@ -15,6 +15,7 @@ calendar are merged, so nobody gets double-booked.
 - ⚙️ **Per-user settings** — username, timezone, minimum notice, booking window, slot spacing
 - 💬 **Event types** with emoji, duration, buffers, colors · 🕐 weekly availability editor
 - 💖 Bookings list with one-click cancel (deletes the Google event + emails the guest)
+- 🎙️ **BookMe Desktop** — a Mac companion app ([source](https://github.com/gigialc/bookme-desktop), [download](https://github.com/gigialc/bookme/releases/latest)) that records your meetings and takes notes with live transcripts, no call bot required
 
 ## Setup (one time)
 
