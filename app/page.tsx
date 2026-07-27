@@ -11,7 +11,7 @@ import {
 
 const GITHUB_URL = "https://github.com/gigialc/bookme";
 const DESKTOP_DOWNLOAD_URL =
-  "https://github.com/gigialc/bookme/releases/tag/v1.0.0";
+  "https://github.com/gigialc/bookme/releases/latest";
 
 const FEATURES = [
   {
