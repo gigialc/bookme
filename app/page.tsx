@@ -195,8 +195,7 @@ export default function Home() {
                 ↓ Download for Mac
               </a>
               <p className="w-full mono-label text-ink/50">
-                free · sign in with google · desktop notes use your recall api
-                key
+                free · sign in with google
               </p>
             </div>
           </div>
@@ -247,13 +246,12 @@ export default function Home() {
           <div>
             <p className="mono-label mb-2 text-rose-600">BookMe Desktop</p>
             <h2 className="mb-2 text-2xl font-bold">
-              Your calls, transcribed beside your schedule.
+              Your schedule, in its own window.
             </h2>
             <p className="max-w-2xl text-sm leading-relaxed text-ink/60">
-              Download the macOS app, create or sign in to your BookMe account,
-              then add your own Recall API key under Meeting Notes → recorder
-              settings. BookMe detects supported meeting windows, and only
-              records after you choose Record &amp; take notes.
+              Download the macOS app and sign in with your BookMe account —
+              your schedule, bookings, and booking links live in a native
+              window instead of another browser tab.
             </p>
           </div>
           <a

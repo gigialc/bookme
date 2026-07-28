@@ -30,10 +30,8 @@ export default function SettingsPage() {
   const [granolaKey, setGranolaKey] = useState("");
   const [granolaMsg, setGranolaMsg] = useState("");
   const [granolaBusy, setGranolaBusy] = useState(false);
-  const [bookmeNotesDesktop, setBookmeNotesDesktop] = useState(false);
 
   useEffect(() => {
-    setBookmeNotesDesktop(navigator.userAgent.includes("Electron"));
     fetch("/api/admin/settings")
       .then((r) => r.json())
       .then((d) => setSettings(d.settings));
@@ -256,57 +254,10 @@ export default function SettingsPage() {
       <div className={cardCls}>
         <h2 className="mb-2 text-sm font-bold">Integrations</h2>
         <p className="mb-5 text-sm text-ink/60">
-          Record new meeting notes with BookMe Notes, or import existing notes
-          from Granola.
+          Import meeting notes from Granola and turn them into to-dos.
         </p>
 
-        <div className="card-flat mb-4 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="mb-1 flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 text-base">
-                  ◉
-                </span>
-                <div>
-                  <h3 className="text-sm font-bold">BookMe Notes</h3>
-                  <p className="text-[11px] font-semibold text-ink/45">
-                    powered by Recall
-                  </p>
-                </div>
-              </div>
-              <p className="mt-2 max-w-md text-xs leading-relaxed text-ink/60">
-                BookMe Desktop detects your calls and records a live,
-                speaker-attributed transcript when you choose to take notes.
-              </p>
-            </div>
-            {bookmeNotesDesktop ? (
-              <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-800">
-                Recorder connected
-              </span>
-            ) : (
-              <span className="rounded-full bg-cream px-3 py-1.5 text-xs font-bold text-ink/55">
-                Desktop app required
-              </span>
-            )}
-          </div>
-          <div className="mt-3">
-            {bookmeNotesDesktop ? (
-              <a
-                href="/dashboard/notes"
-                className="btn inline-flex px-4 py-2 text-xs"
-              >
-                Open Meeting Notes
-              </a>
-            ) : (
-              <p className="text-xs text-ink/50">
-                Open Settings inside BookMe Desktop to see the live recorder
-                connection.
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="border-t border-ink/10 pt-4">
+        <div>
           <h3 className="mb-1 text-sm font-bold">Granola</h3>
           <p className="mb-4 text-xs text-ink/60">
             Optional: connect{" "}
